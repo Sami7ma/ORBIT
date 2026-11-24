@@ -54,7 +54,18 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
       - run: npm ci
-      - run: npm run tauri -- build --no-bundle
+      - name: Build native application and installer with the retained lockfile
+        run: npm run tauri -- build --ci -- --locked
+      - name: Confirm the Rust dependency lockfile is unchanged
+        run: git diff --exit-code -- src-tauri/Cargo.lock
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-bundles-${{ runner.os }}
+          path: |
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v7
         if: always()
         with:

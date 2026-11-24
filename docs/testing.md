@@ -31,7 +31,9 @@ The source snapshot had icons but no original app screenshots. The reference ima
 | Accessibility | Keyboard navigation, Narrator/Orca, forced colors, reduced motion, opaque surface and larger display scaling |
 | Security | Packaged CSP permits local scripts, IPC and the two API hosts while rejecting other remote scripts |
 
-The workflow under `.github/workflows/check.yml` runs frontend checks on Linux and Windows, browser checks on Ubuntu, and native compilation on Linux and Windows. Adding the workflow is not evidence that those remote jobs have already run. The existing Cargo.lock from the GitHub repository is retained. A native build must verify that it remains compatible with the tray-enabled manifest before release.
+The workflow under `.github/workflows/check.yml` runs frontend checks on Linux and Windows, browser checks on Ubuntu, and locked native builds on Linux and Windows. It packages RPM/NSIS installers and retains unsigned development bundles as `desktop-bundles-Linux` and `desktop-bundles-Windows` artifacts for seven days. These artifacts support manual verification; they are not signed releases. The Ubuntu build does not replace testing the RPM on Fedora.
+
+[The first reliability workflow run](https://github.com/Sami7ma/ORBIT/actions/runs/45395935330) passed all five jobs, including native Windows and Ubuntu compilation. That run used `--no-bundle`; it proves compilation, not installer generation or desktop behavior. Installer results must be checked in a later run after the bundling workflow change. The existing Cargo.lock is retained, and the current workflow rejects changes to it.
 
 ## Fedora native build environment
 
