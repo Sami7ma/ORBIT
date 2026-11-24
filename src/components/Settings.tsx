@@ -71,8 +71,8 @@ export default function Settings({ s, set, custom, onCustom, local, onChooseLoca
         </>}
 
         <h4>Size</h4>
-        <Row label="Widget size" hint="Or drag the grip in the bottom-right corner"><SizeSlider value={s.scale} onCommit={(scale) => set({ scale })} /></Row>
-        <Row label="Lock position" hint="Stops accidental dragging"><Switch label="Lock position" on={s.lock} onChange={(lock) => set({ lock })} /></Row>
+        <Row label="Widget size" hint="Scales the clocks; drag any edge or corner to resize the visible area"><SizeSlider value={s.scale} onCommit={(scale) => set({ scale })} /></Row>
+        <Row label="Lock position" hint="Stops moving and resizing the widget"><Switch label="Lock position" on={s.lock} onChange={(lock) => set({ lock })} /></Row>
 
         <h4>Time</h4>
         <Row label="Clock"><Seg value={s.h24 ? "24" : "12"} onChange={(v) => set({ h24: v === "24" })} options={[["12", "12-hour"], ["24", "24-hour"]]} /></Row>

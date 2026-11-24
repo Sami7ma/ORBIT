@@ -1,4 +1,5 @@
-export type Layout = { scale: number; width: number; height: number };
+export type WindowBounds = { minWidth: number; minHeight: number; maxWidth: number; maxHeight: number };
+export type Layout = { scale: number; width: number; height: number; bounds?: WindowBounds };
 
 /** Serialize native calls and skip queued intermediate sizes during a resize gesture. */
 export function layoutQueue(apply: (layout: Layout) => Promise<void>) {

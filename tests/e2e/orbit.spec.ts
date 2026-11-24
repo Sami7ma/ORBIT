@@ -34,6 +34,8 @@ test("keeps ring design, opens details with keyboard, and updates after an hour'
   const local = page.getByRole("button", { name: /^Local,/ });
   await expect(local).toHaveAccessibleName(/3:15 PM/);
   await local.focus();
+  await expect(page.locator(".panel")).toHaveCount(0);
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("region", { name: "Local details" })).toBeVisible();
   await expect(local).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator(".hud")).toHaveCSS("opacity", "1");
@@ -133,12 +135,12 @@ test("keeps saved forecasts visibly stale after network failure", async ({ page 
   await page.clock.fastForward(31 * 60_000);
   await expect(page.getByRole("status").filter({ hasText: "Saved forecast" })).toBeVisible();
   await expect(page.getByRole("status").filter({ hasText: "Could not refresh" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^London,/ }).locator(".badge")).toHaveCount(0);
+  await expect(page.locator(".ring-item").filter({ has: page.getByRole("button", { name: /^London,/ }) }).locator(".badge")).toHaveClass(/is-stale/);
   await page.unroute("https://api.open-meteo.com/**");
   await weather(page, false, epoch + 31 * 60);
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect(page.getByRole("status").filter({ hasText: "Saved forecast" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^London,/ }).locator(".badge")).toHaveCount(1);
+  await expect(page.locator(".ring-item").filter({ has: page.getByRole("button", { name: /^London,/ }) }).locator(".badge")).not.toHaveClass(/is-stale/);
 });
 
 test("handles initial weather and search failures without breaking the clocks", async ({ page }) => {
@@ -179,4 +181,79 @@ test("captures current browser-preview design references", async ({ page }) => {
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.keyboard.press("Escape");
   await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-solid.png", animations: "disabled" });
+  await page.getByRole("separator", { name: "Resize from right", exact: true }).focus();
+  for (let i = 0; i < 23; i++) await page.keyboard.press("ArrowLeft");
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-single-city.png", animations: "disabled" });
+  await page.getByRole("separator", { name: "Resize from bottom", exact: true }).focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press("ArrowDown");
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-two-rows.png", animations: "disabled" });
+});
+
+
+test("stays compact until the clock center is activated, with weather always present when enabled", async ({ page }) => {
+  await open(page);
+  const london = page.locator(".ring-item").filter({ has: page.getByRole("button", { name: /^London,/ }) });
+  await expect(london.getByRole("img", { name: "Cloudy", exact: true })).toBeVisible();
+  await london.locator(".name").hover();
+  await expect(page.locator(".panel")).toHaveCount(0);
+  await expect(page.locator(".shell")).toHaveCSS("height", "188px");
+  await london.locator(".badge").click();
+  await expect(page.locator(".panel")).toHaveCount(0);
+  await london.getByRole("button").click();
+  await expect(page.getByRole("region", { name: "London details" })).toBeVisible();
+  await page.getByRole("button", { name: "Close city details" }).click();
+  await expect(page.locator(".panel")).toHaveCount(0);
+  await london.getByRole("button").click();
+  await page.mouse.move(5, 5);
+  await page.clock.runFor(400);
+  await expect(page.locator(".panel")).toHaveCount(0);
+  await expect(london.locator(".badge")).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("switch", { name: "Show weather", exact: true }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.locator(".badge")).toHaveCount(0);
+  await expect(page.locator(".fx")).toHaveCount(0);
+});
+
+test("shows weather failure and missing-location states without opening details", async ({ page }) => {
+  await page.clock.install({ time: instant });
+  await weather(page, true);
+  await page.goto("/");
+  await expect(page.getByRole("img", { name: "Choose Local weather location in Settings" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Weather unavailable; will retry" })).toHaveCount(3);
+  await expect(page.locator(".panel")).toHaveCount(0);
+});
+
+test("resizes the visible area to one city, keeps other clocks scrollable and restores the size", async ({ page }) => {
+  await open(page);
+  const shell = page.locator(".shell");
+  const edge = page.getByRole("separator", { name: "Resize from right", exact: true });
+  const box = await edge.boundingBox();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x - 450, box!.y + box!.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect(shell).toHaveCSS("width", "160px");
+  await expect(shell).toHaveCSS("height", "188px");
+  await expect(page.locator(".panel")).toHaveCount(0);
+  const local = page.getByRole("button", { name: /^Local,/ });
+  const tokyo = page.getByRole("button", { name: /^Tokyo,/ });
+  await expect(local).toBeInViewport();
+  await page.locator(".strip").hover();
+  await page.mouse.wheel(0, 600);
+  await page.clock.runFor(700);
+  await expect(tokyo).toBeInViewport();
+  await page.reload();
+  await expect(shell).toHaveCSS("width", "160px");
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("orbit.settings.v2")!));
+  expect(saved.scale).toBe(1);
+  expect(saved.viewportWidth).toBe(160);
+  await page.getByRole("separator", { name: "Resize from bottom", exact: true }).focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press("ArrowDown");
+  await expect(shell).toHaveCSS("height", "348px");
+  await expect(page.locator(".strip")).toHaveCSS("grid-template-rows", "142px 142px");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("switch", { name: "Lock position" }).click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByRole("separator")).toHaveCount(0);
 });

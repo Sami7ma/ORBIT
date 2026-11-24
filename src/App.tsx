@@ -3,6 +3,8 @@ import Ring from "./components/Ring";
 import Panel from "./components/Panel";
 import Picker from "./components/Picker";
 import Settings from "./components/Settings";
+import ResizeHandles from "./components/ResizeHandles";
+import { fitViewport, viewportBounds, viewportRows, type Viewport } from "./platform/viewport.ts";
 import { Close, Gear, Plus } from "./components/Icons";
 import { type City } from "./lib/cities";
 import { withLocalWeather } from "./domain/city.ts";
@@ -12,17 +14,16 @@ import { bgUrl } from "./lib/backgrounds";
 import { keyOf } from "./lib/search";
 import { useSettings } from "./lib/settings";
 import { useWeather } from "./lib/weather";
-import { closeApp, drag, inTauri, pinToDesktop, setBlur, setLayout } from "./lib/win";
+import { closeApp, drag, inTauri, pinToDesktop, setBlur, setLayout, observeWindowSize } from "./lib/win";
 
 const BG_KEY = "orbit.bg.custom";
 const scrollBehavior = (): ScrollBehavior => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 type Mode = "full" | "panel" | "picker" | "settings";
 
-// Base (100%) size of the widget in each state. The window is this size times the user's scale.
-function dims(mode: Mode, n: number, hasHours: boolean): [number, number] {
-  const v = Math.min(Math.max(n, 1), 4);
-  if (mode === "full") return [Math.max(360, 40 + 120 * v), 188];
-  if (mode === "panel") return [Math.max(360, 40 + 120 * v), hasHours ? 456 : 350];
+// Dimensions stay in logical pixels; scale is an independent appearance preference.
+function dims(mode: Mode, viewport: Viewport, hasHours: boolean): [number, number] {
+  if (mode === "full") return [viewport.width, viewport.height];
+  if (mode === "panel") return [Math.max(360, viewport.width), viewport.height + (hasHours ? 268 : 162)];
   return [520, mode === "settings" ? 540 : 470];
 }
 
@@ -55,18 +56,53 @@ export default function App() {
   const panelOpen = view === "rings" && !!current;
   const mode: Mode = view === "picker" ? "picker" : view === "settings" ? "settings" : panelOpen ? "panel" : "full";
   const message = nativeError || notice || (!dismissedSettingsError ? settingsError : null);
-  const [W, baseHeight] = dims(mode, n, hasHours);
+  const viewport = fitViewport({ width: S.viewportWidth, height: S.viewportHeight }, n);
+  const resizeViewport = useCallback((size: Viewport) => set({ viewportWidth: size.width, viewportHeight: size.height }), [set]);
+  const [W, baseHeight] = dims(mode, viewport, hasHours);
   const H = baseHeight + (message ? 64 : 0);
-  useEffect(() => { void setLayout(S.scale, W, H).catch(reportNativeError); }, [S.scale, W, H, reportNativeError]);
+  const nativeResize = useRef<{ width: number; height: number } | null>(null);
+  const sizeContext = useRef({ view, scale: S.scale, extraHeight: H - viewport.height, count: n, locked: S.lock });
+  sizeContext.current = { view, scale: S.scale, extraHeight: H - viewport.height, count: n, locked: S.lock };
+  useEffect(() => {
+    let disposed = false, stop: (() => void) | undefined;
+    void observeWindowSize((width, height) => {
+      const context = sizeContext.current;
+      if (context.view !== "rings" || context.locked) return;
+      const next = fitViewport({ width: width / context.scale, height: height / context.scale - context.extraHeight }, context.count);
+      nativeResize.current = { width, height };
+      set({ viewportWidth: next.width, viewportHeight: next.height });
+    }).then((unlisten) => { if (disposed) unlisten(); else stop = unlisten; }).catch(reportNativeError);
+    return () => { disposed = true; stop?.(); };
+  }, [set, reportNativeError]);
+  const limits = viewportBounds(n);
+  const extra = H - viewport.height;
+  const minWidth = mode === "panel" ? Math.max(360, limits.minWidth) : limits.minWidth;
+  const bounds = view === "rings" && !S.lock
+    ? { ...limits, minWidth, maxWidth: Math.max(minWidth, limits.maxWidth), minHeight: limits.minHeight + extra, maxHeight: limits.maxHeight + extra }
+    : { minWidth: W, maxWidth: W, minHeight: H, maxHeight: H };
+  useEffect(() => {
+    const native = nativeResize.current;
+    nativeResize.current = null;
+    // The compositor already applied a manual resize. Do not send an older size
+    // back while the user is still dragging an edge.
+    if (native && Math.abs(native.width - W * S.scale) <= 1 && Math.abs(native.height - H * S.scale) <= 1) return;
+    void setLayout(S.scale, W, H, bounds).catch(reportNativeError);
+  }, [S.scale, W, H, bounds.minWidth, bounds.minHeight, bounds.maxWidth, bounds.maxHeight, reportNativeError]);
+  useEffect(() => {
+    const collapse = () => setFocus(null);
+    window.addEventListener("blur", collapse);
+    return () => window.removeEventListener("blur", collapse);
+  }, []);
 
-  const enter = useCallback((id: string) => { clearTimeout(leave.current); setFocus(id); }, []);
+  const activate = useCallback((id: string) => { clearTimeout(leave.current); setFocus((previous) => previous === id ? null : id); }, []);
   const over = () => clearTimeout(leave.current);
   const out = () => { clearTimeout(leave.current); leave.current = window.setTimeout(() => {
-    if (!strip.current?.contains(document.activeElement)) setFocus(null);
+    setFocus(null);
   }, 350); };
 
   const closeView = () => {
     const control = view === "settings" ? "settings" : "add";
+    setFocus(null);
     setView("rings");
     requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-control="${control}"]`)?.focus());
   };
@@ -77,8 +113,9 @@ export default function App() {
       ? list.map((city) => city.kind === "local" ? withLocalWeather(city, c) : city)
       : list.some((city) => city.id === c.id) ? list : [...list, c]);
     setView("rings");
+    setFocus(localWeatherPicker ? "local" : null);
     requestAnimationFrame(() => {
-      const button = Array.from(strip.current?.querySelectorAll<HTMLButtonElement>(".ring-item") ?? []).find((item) => item.dataset.cityId === (localWeatherPicker ? "local" : c.id));
+      const button = Array.from(strip.current?.querySelectorAll<HTMLButtonElement>(".clock-trigger") ?? []).find((item) => item.dataset.cityId === (localWeatherPicker ? "local" : c.id));
       button?.focus(); button?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: scrollBehavior() });
     });
   };
@@ -91,35 +128,10 @@ export default function App() {
   });
   const saveCustom = (d: string) => { setCustom(d); try { localStorage.setItem(BG_KEY, d); } catch { setNotice("Your image could not be saved. It will stay in this session."); } };
 
-  // Drag the bottom-right grip to resize. Uses the pointer position from when you pressed,
-  // so the size follows your cursor smoothly and never feeds back into itself.
-  const grip = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const x0 = e.screenX, y0 = e.screenY, s0 = S.scale, w0 = W * s0, h0 = H * s0;
-    let raf = 0;
-    const move = (m: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const k = ((w0 + (m.screenX - x0)) / w0 + (h0 + (m.screenY - y0)) / h0) / 2;
-        set({ scale: Math.round(Math.min(1.5, Math.max(0.7, s0 * k)) * 100) / 100 });
-      });
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
-  };
-
   const black = S.style === "black";
   const bg = black ? "" : S.bg === "custom" ? (custom ? `url(${custom})` : "") : S.bg !== "none" ? bgUrl(S.bg) : "";
   const tint = black ? 1 : Math.max(0.04, 0.94 - 0.0088 * S.clear);
-  const vis = Math.min(n, 4);
+  const rows = viewportRows(viewport.height);
 
   return (
     <div
@@ -130,7 +142,7 @@ export default function App() {
       onKeyDown={(e) => { if (e.key === "Escape" && view === "rings") setFocus(null); }}
       onMouseDown={(e) => {
         // drag the widget from anywhere that isn't a control
-        if (e.button === 0 && !S.lock && !(e.target as HTMLElement).closest("button,input,a,.hours,.results,.sbody,.grip")) void drag().catch(reportNativeError);
+        if (e.button === 0 && !S.lock && !(e.target as HTMLElement).closest("button,input,a,.hours,.results,.sbody,.resize-edge,.panel")) void drag().catch(reportNativeError);
       }}
     >
       {bg && <div className="bg" style={{ backgroundImage: bg }} />}
@@ -143,24 +155,24 @@ export default function App() {
       {view === "rings" && (
         <>
           <div className="hud">
-            <button data-control="add" aria-label="Add a city" title="Add a city" onClick={() => { setLocalWeatherPicker(false); setView("picker"); }}><Plus /></button>
-            <button data-control="settings" aria-label="Settings" title="Settings" onClick={() => setView("settings")}><Gear /></button>
+            <button data-control="add" aria-label="Add a city" title="Add a city" onClick={() => { setLocalWeatherPicker(false); setFocus(null); setView("picker"); }}><Plus /></button>
+            <button data-control="settings" aria-label="Settings" title="Settings" onClick={() => { setFocus(null); setView("settings"); }}><Gear /></button>
             {inTauri && <button aria-label="Quit ORBIT" title="Quit ORBIT" onClick={() => { void closeApp().catch(reportNativeError); }}><Close /></button>}
           </div>
           <div
             className="strip" ref={strip}
-            style={{ width: 120 * vis + 8 }}
+            style={{ width: "100%", height: viewport.height - 26, gridTemplateRows: `repeat(${rows}, 142px)` }}
             onWheel={(e) => { if (!e.deltaX) strip.current?.scrollBy({ left: e.deltaY * 2, behavior: scrollBehavior() }); }}
           >
             {cities.map((c) => (
               <Ring key={keyOf(c)} city={c} now={now} homeTz={home} fmt={fmt}
-                weather={S.weather ? weather[keyOf(c)] : undefined} active={panelOpen && focus === c.id} onEnter={() => enter(c.id)} />
+                weather={S.weather ? weather[keyOf(c)] : undefined} active={panelOpen && focus === c.id} onActivate={() => activate(c.id)} />
             ))}
           </div>
           {panelOpen && current && (
-            <Panel key={keyOf(current)} city={current} now={now} home={home} h24={S.h24} utc={S.utc} weatherOn={S.weather} weather={cw} onChooseWeather={chooseLocalWeather} />
+            <Panel key={keyOf(current)} city={current} now={now} home={home} h24={S.h24} utc={S.utc} weatherOn={S.weather} weather={cw} onChooseWeather={chooseLocalWeather} onClose={() => setFocus(null)} />
           )}
-          {!S.lock && <div className="grip" title="Drag to resize" onPointerDown={grip} />}
+          {!S.lock && <ResizeHandles viewport={viewport} count={n} scale={S.scale} onResize={resizeViewport} onError={reportNativeError} />}
         </>
       )}
       {message && <div className="notice" role="status"><span>{message}</span><button aria-label="Dismiss message" onClick={() => {
