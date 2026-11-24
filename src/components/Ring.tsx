@@ -1,27 +1,30 @@
 import { useId } from "react";
 import type { City } from "../lib/cities";
-import { clock, zoneLabel, type Fmt } from "../lib/time";
-import { glyph, type Weather } from "../lib/weather";
+import { clock, dateText, dayShiftText, zoneLabel, type Fmt } from "../lib/time";
+import { glyph, weatherIsStale, type WeatherState } from "../lib/weather";
 import Fx from "./Fx";
 
 const SIZE = 104, STROKE = 6, R = (SIZE - STROKE) / 2, C = 2 * Math.PI * R;
 
-type Props = { city: City; now: Date; homeTz: string; fmt: Fmt; weather?: Weather | null; active: boolean; onEnter: () => void };
+type Props = { city: City; now: Date; homeTz: string; fmt: Fmt; weather?: WeatherState; active: boolean; onEnter: () => void };
 
 export default function Ring({ city, now, homeTz, fmt, weather, active, onEnter }: Props) {
   const id = useId();
   const t = clock(city.tz, now, homeTz, fmt.h24);
   const h = Math.floor(t.frac * 24);
-  const night = weather ? weather.night : h < 6 || h >= 18;
-  const shift = t.dayShift === 1 ? "Tomorrow" : t.dayShift === -1 ? "Yesterday" : "";
+  const freshWeather = weather?.data && weather.status !== "error" && !weatherIsStale(weather.data, now.getTime()) ? weather.data : undefined;
+  const night = freshWeather ? freshWeather.night : h < 6 || h >= 18;
+  const shift = dayShiftText(t.dayShift);
   const label = zoneLabel(city.tz, now, fmt.utc);
-  const small = `:${t.minute}${!fmt.h24 && fmt.ampm ? ` ${t.period}` : ""}`;
 
   return (
-    <div className={`ring-item ${active ? "active" : ""}`} onMouseEnter={onEnter}>
+    <button type="button" data-city-id={city.id} className={`ring-item ${active ? "active" : ""}`} onMouseEnter={onEnter} onFocus={onEnter} onClick={onEnter}
+      aria-expanded={active} aria-controls={active ? "city-details" : undefined}
+      aria-label={`${city.name}, ${t.hour}:${t.minute} ${fmt.h24 ? "" : t.period}, ${dateText(city.tz, now)}, ${label}${shift ? `, ${shift}` : ""}`}
+      title="The ring shows progress through this city's day. Open for details.">
       <div className={`ring ${night ? "night" : "day"}`}>
-        <div className="disc">{weather && <Fx kind={weather.kind} night={night} />}</div>
-        <svg viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <div className="disc">{freshWeather?.kind && <Fx kind={freshWeather.kind} night={night} />}</div>
+        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true">
           <defs>
             <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stopColor={night ? "#b9c3ff" : "#ffe08a"} />
@@ -36,13 +39,13 @@ export default function Ring({ city, now, homeTz, fmt, weather, active, onEnter 
           />
         </svg>
         <div className="time">
-          <b>{t.hour}</b>
-          <span>{small}</span>
+          <div className="hm"><b>{t.hour}</b><i>:{t.minute}</i></div>
+          {!fmt.h24 && fmt.ampm && <span>{t.period}</span>}
         </div>
-        {weather && <div className="badge">{glyph(weather.kind, night)}</div>}
+        {freshWeather?.kind && <div className="badge" aria-hidden="true">{glyph(freshWeather.kind, night)}</div>}
       </div>
-      <div className="name">{city.name === "Local" ? "Local" : city.name}</div>
+      <div className="name">{city.name}</div>
       <div className="zone">{shift ? `${shift} · ${label}` : label}</div>
-    </div>
+    </button>
   );
 }

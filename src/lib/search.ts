@@ -1,49 +1,56 @@
-import { CITIES, type City } from "./cities";
-import { searchText } from "./time";
+import { canonicalTimezone, coordinates, makeCity, normalizeText, validTimezone } from "../domain/city.ts";
+import { CITIES, type City } from "./cities.ts";
+import { searchText } from "./time.ts";
 
-export const keyOf = (c: City) => `${c.name}|${c.tz}`;
+export const keyOf = (city: City) => city.id;
 
-// Every IANA zone the system knows (~400), so any zone name works even without a bundled city.
 const ZONES: City[] = (() => {
+  const zones: City[] = [makeCity("UTC", "Coordinated Universal Time", "UTC")];
   try {
-    const all = (Intl as any).supportedValuesOf("timeZone") as string[];
-    const seen = new Set(CITIES.map((c) => `${c.name.toLowerCase()}|${c.tz}`));
-    return all
-      .filter((tz) => tz.includes("/"))
-      .map((tz) => {
-        const parts = tz.split("/");
-        return { name: parts[parts.length - 1].replace(/_/g, " "), country: parts[0].replace(/_/g, " "), tz, lat: NaN, lon: NaN };
-      })
-      .filter((c) => !seen.has(`${c.name.toLowerCase()}|${c.tz}`));
-  } catch { return []; }
+    const all = (Intl as typeof Intl & { supportedValuesOf(key: string): string[] }).supportedValuesOf("timeZone");
+    const known = new Set(CITIES.map((city) => `${normalizeText(city.name)}|${canonicalTimezone(city.tz)}`));
+    for (const tz of all) {
+      const parts = tz.split("/");
+      const name = parts[parts.length - 1].replace(/_/g, " ");
+      if (!known.has(`${normalizeText(name)}|${canonicalTimezone(tz)}`)) zones.push(makeCity(name, parts[0], tz));
+    }
+  } catch { /* Older webviews still have the bundled cities and UTC. */ }
+  return zones;
 })();
 
-let index: { c: City; s: string }[] | null = null;
+let index: { hour: number; entries: { city: City; text: string }[] } | undefined;
 
-export function searchLocal(query: string, limit = 40): City[] {
-  if (!index) index = [...CITIES, ...ZONES].map((c) => ({ c, s: searchText(c.tz, c.name, c.country) }));
-  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const hits = index.filter(({ s }) => words.every((w) => s.includes(w)));
-  // prefer names that start with the query
-  const q = query.trim().toLowerCase();
-  hits.sort((a, b) => Number(b.c.name.toLowerCase().startsWith(q)) - Number(a.c.name.toLowerCase().startsWith(q)));
-  return hits.slice(0, limit).map((x) => x.c);
+export function searchLocal(query: string, limit = 40, now = new Date()): City[] {
+  const hour = Math.floor(now.getTime() / 3_600_000);
+  if (index?.hour !== hour) index = {
+    hour, entries: [...CITIES, ...ZONES].map((city) => ({ city, text: normalizeText(searchText(city.tz, city.name, city.country, now)) })),
+  };
+  const q = normalizeText(query.trim());
+  const words = q.split(/\s+/).filter(Boolean);
+  return index.entries.filter(({ text }) => words.every((word) => text.includes(word)))
+    .sort((a, b) => Number(normalizeText(b.city.name).startsWith(q)) - Number(normalizeText(a.city.name).startsWith(q)))
+    .slice(0, limit).map(({ city }) => city);
 }
 
-/** Any city on Earth (needs internet). Open-Meteo geocoding, no key. */
-export async function searchOnline(q: string, signal?: AbortSignal): Promise<City[]> {
-  const r = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=en&format=json`,
-    { signal }
-  );
-  const j = await r.json();
-  return (j.results ?? [])
-    .filter((x: any) => x.timezone)
-    .map((x: any) => ({
-      name: x.name as string,
-      country: [x.admin1, x.country].filter(Boolean).join(", "),
-      tz: x.timezone as string,
-      lat: x.latitude as number,
-      lon: x.longitude as number,
-    }));
+export function parseSearchResults(raw: unknown): City[] {
+  if (!raw || typeof raw !== "object") throw new Error("Invalid search response");
+  const results = (raw as { results?: unknown }).results;
+  if (results === undefined) return [];
+  if (!Array.isArray(results)) throw new Error("Invalid search results");
+  const cities: City[] = [];
+  for (const result of results) {
+    if (!result || typeof result !== "object") continue;
+    const value = result as Record<string, unknown>;
+    const position = coordinates(value.latitude, value.longitude);
+    if (typeof value.name !== "string" || !value.name.trim() || !validTimezone(value.timezone) || !position) continue;
+    const country = [value.admin1, value.country].filter((part): part is string => typeof part === "string" && !!part).join(", ");
+    cities.push(makeCity(value.name, country, value.timezone, position.lat, position.lon));
+  }
+  return cities;
+}
+
+export async function searchOnline(query: string, signal?: AbortSignal): Promise<City[]> {
+  const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=8&language=en&format=json`, { signal });
+  if (!response.ok) throw new Error(`City search failed (${response.status})`);
+  return parseSearchResults(await response.json());
 }

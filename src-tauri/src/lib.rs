@@ -1,5 +1,10 @@
 use tauri::Manager;
 
+#[tauri::command]
+fn runtime_platform() -> &'static str {
+    std::env::consts::OS
+}
+
 /// Turns the native Windows Acrylic blur (the desktop showing through) on or off.
 #[tauri::command]
 fn set_blur(app: tauri::AppHandle, enabled: bool) {
@@ -34,7 +39,7 @@ pub fn run() {
     }
 
     builder
-        .invoke_handler(tauri::generate_handler![set_blur])
+        .invoke_handler(tauri::generate_handler![set_blur, runtime_platform])
         .setup(|app| {
             #[cfg(target_os = "windows")]
             {

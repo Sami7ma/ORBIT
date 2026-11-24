@@ -1,4 +1,5 @@
-export type City = { name: string; country: string; tz: string; lat: number; lon: number };
+import { makeCity, makeLocal, type City } from "../domain/city.ts";
+export type { City } from "../domain/city.ts";
 
 // Compact bundled list so search works offline. Add more any time.
 const raw: [string, string, string, number, number][] = [
@@ -147,7 +148,10 @@ const raw: [string, string, string, number, number][] = [
   ["Reykjavik", "Iceland", "Atlantic/Reykjavik", 64.15, -21.94],
 ];
 
-export const CITIES: City[] = raw.map(([name, country, tz, lat, lon]) => ({ name, country, tz, lat, lon }));
+export const CITIES: City[] = raw.flatMap(([name, country, tz, lat, lon]) => {
+  try { return [makeCity(name, country, tz, lat, lon)]; }
+  catch { return []; } // An older timezone database must not prevent startup.
+});
 
 export const DEFAULT_NAMES = ["New York", "London", "Tokyo"];
 
@@ -155,15 +159,12 @@ export function localTz(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
-/** First ring: the user's own time. Uses a known city in the same zone for weather when possible. */
-export function localCity(): City {
-  const tz = localTz();
-  const hit = CITIES.find((c) => c.tz === tz);
-  return hit
-    ? { ...hit, name: "Local" }
-    : { name: "Local", country: "", tz, lat: NaN, lon: NaN };
-}
+/** Local time follows the device. Weather needs an explicitly selected location. */
+export function localCity(tz = localTz()): City { return makeLocal(tz); }
 
-export function defaultCities(): City[] {
-  return [localCity(), ...DEFAULT_NAMES.map((n) => CITIES.find((c) => c.name === n)!)];
+export function defaultCities(tz = localTz()): City[] {
+  return [localCity(tz), ...DEFAULT_NAMES.flatMap((name) => {
+    const city = CITIES.find((candidate) => candidate.name === name);
+    return city ? [city] : [];
+  })];
 }

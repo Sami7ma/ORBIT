@@ -3,139 +3,169 @@ import Ring from "./components/Ring";
 import Panel from "./components/Panel";
 import Picker from "./components/Picker";
 import Settings from "./components/Settings";
-import { Close, Gear, Minus, Pin, Plus } from "./components/Icons";
-import { defaultCities, localTz, type City } from "./lib/cities";
+import { Close, Gear, Plus } from "./components/Icons";
+import { type City } from "./lib/cities";
+import { withLocalWeather } from "./domain/city.ts";
+import { useClock } from "./hooks/useClock.ts";
+import { useCities } from "./hooks/useCities.ts";
 import { bgUrl } from "./lib/backgrounds";
 import { keyOf } from "./lib/search";
 import { useSettings } from "./lib/settings";
 import { useWeather } from "./lib/weather";
-import { closeApp, drag, inTauri, minimize, resize, setBlur, setPin } from "./lib/win";
+import { closeApp, drag, inTauri, pinToDesktop, setBlur, setLayout } from "./lib/win";
 
-const CITIES_KEY = "orbit.cities.v2";
 const BG_KEY = "orbit.bg.custom";
-type Mode = "mini" | "full" | "panel" | "picker" | "settings";
+const scrollBehavior = (): ScrollBehavior => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+type Mode = "full" | "panel" | "picker" | "settings";
 
-function dims(mode: Mode, n: number): [number, number] {
+// Base (100%) size of the widget in each state. The window is this size times the user's scale.
+function dims(mode: Mode, n: number, hasHours: boolean): [number, number] {
   const v = Math.min(Math.max(n, 1), 4);
-  if (mode === "mini") return [32 + 72 * v, 92];
   if (mode === "full") return [Math.max(360, 40 + 120 * v), 188];
-  if (mode === "panel") return [Math.max(360, 40 + 120 * v), 344];
+  if (mode === "panel") return [Math.max(360, 40 + 120 * v), hasHours ? 456 : 350];
   return [520, mode === "settings" ? 540 : 470];
 }
 
-function loadCities(): City[] {
-  try {
-    const saved = JSON.parse(localStorage.getItem(CITIES_KEY) || "null") as City[] | null;
-    if (saved?.length) return saved.map((c) => (c.name === "Local" ? { ...c, tz: localTz() } : c));
-  } catch { /* fall through */ }
-  return defaultCities();
-}
-
 export default function App() {
-  const [cities, setCities] = useState<City[]>(loadCities);
-  const [S, set] = useSettings();
+  const { now, home } = useClock();
+  const { cities, setCities, notice, setNotice } = useCities(home);
+  const [S, set, settingsError] = useSettings();
   const [custom, setCustom] = useState<string | null>(() => { try { return localStorage.getItem(BG_KEY); } catch { return null; } });
-  const [now, setNow] = useState(() => new Date());
   const [view, setView] = useState<"rings" | "picker" | "settings">("rings");
-  const [hover, setHover] = useState(false);
-  const [focus, setFocus] = useState<number | null>(null);
+  const [focus, setFocus] = useState<string | null>(null);
+  const [localWeatherPicker, setLocalWeatherPicker] = useState(false);
+  const [nativeError, setNativeError] = useState<string | null>(null);
+  const [dismissedSettingsError, dismissSettingsError] = useState(false);
   const leave = useRef<number>();
   const strip = useRef<HTMLDivElement>(null);
-  const weather = useWeather(S.weather ? cities : []);
-  const home = localTz();
+  const weather = useWeather(S.weather ? cities : [], S.temperatureUnit);
   const fmt = { h24: S.h24, ampm: S.ampm, utc: S.utc };
-
-  useEffect(() => { const id = setInterval(() => setNow(new Date()), 5000); return () => clearInterval(id); }, []);
-  useEffect(() => { try { localStorage.setItem(CITIES_KEY, JSON.stringify(cities)); } catch { /* ignore */ } }, [cities]);
-  useEffect(() => { setPin(S.pin); }, [S.pin]);
-  useEffect(() => { setBlur(S.blur); }, [S.blur]);
+  const reportNativeError = useCallback((error: unknown) => {
+    console.error("ORBIT window operation failed", error);
+    setNativeError("A window setting could not be applied. Try reopening ORBIT.");
+  }, []);
+  useEffect(() => { void pinToDesktop().catch(reportNativeError); }, [reportNativeError]);
+  useEffect(() => { void setBlur(S.blur && S.style === "glass").catch(reportNativeError); }, [S.blur, S.style, reportNativeError]);
+  useEffect(() => () => clearTimeout(leave.current), []);
 
   const n = cities.length;
-  const panelOpen = view === "rings" && hover && focus !== null && focus < n;
-  const mode: Mode = view === "picker" ? "picker" : view === "settings" ? "settings"
-    : S.minimal && !hover ? "mini" : panelOpen ? "panel" : "full";
-  const [W, H] = dims(mode, n);
-  useEffect(() => { resize(W * S.scale, H * S.scale); }, [W, H, S.scale]);
+  const current = cities.find((city) => city.id === focus);
+  const cw = current ? weather[keyOf(current)] : undefined;
+  const hasHours = S.weather && !!cw?.data?.hours.some((hour) => hour.time > now.getTime() / 1000);
+  const panelOpen = view === "rings" && !!current;
+  const mode: Mode = view === "picker" ? "picker" : view === "settings" ? "settings" : panelOpen ? "panel" : "full";
+  const message = nativeError || notice || (!dismissedSettingsError ? settingsError : null);
+  const [W, baseHeight] = dims(mode, n, hasHours);
+  const H = baseHeight + (message ? 64 : 0);
+  useEffect(() => { void setLayout(S.scale, W, H).catch(reportNativeError); }, [S.scale, W, H, reportNativeError]);
 
-  const enter = useCallback((i: number) => { clearTimeout(leave.current); setHover(true); setFocus(i); }, []);
-  const over = () => { clearTimeout(leave.current); setHover(true); };
-  const out = () => { leave.current = window.setTimeout(() => { setHover(false); setFocus(null); }, 350); };
+  const enter = useCallback((id: string) => { clearTimeout(leave.current); setFocus(id); }, []);
+  const over = () => clearTimeout(leave.current);
+  const out = () => { clearTimeout(leave.current); leave.current = window.setTimeout(() => {
+    if (!strip.current?.contains(document.activeElement)) setFocus(null);
+  }, 350); };
+
+  const closeView = () => {
+    const control = view === "settings" ? "settings" : "add";
+    setView("rings");
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-control="${control}"]`)?.focus());
+  };
+  const chooseLocalWeather = () => { setLocalWeatherPicker(true); setView("picker"); };
 
   const add = (c: City) => {
-    setCities((l) => [...l, c]);
+    setCities((list) => localWeatherPicker
+      ? list.map((city) => city.kind === "local" ? withLocalWeather(city, c) : city)
+      : list.some((city) => city.id === c.id) ? list : [...list, c]);
     setView("rings");
-    requestAnimationFrame(() => strip.current?.scrollTo({ left: 9999, behavior: "smooth" }));
+    requestAnimationFrame(() => {
+      const button = Array.from(strip.current?.querySelectorAll<HTMLButtonElement>(".ring-item") ?? []).find((item) => item.dataset.cityId === (localWeatherPicker ? "local" : c.id));
+      button?.focus(); button?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: scrollBehavior() });
+    });
   };
   const remove = (i: number) => setCities((l) => (l.length > 1 ? l.filter((_, j) => j !== i) : l));
-  const saveCustom = (d: string) => { setCustom(d); try { localStorage.setItem(BG_KEY, d); } catch { /* too big: keep in memory */ } };
+  const moveCity = (index: number, direction: -1 | 1) => setCities((list) => {
+    const next = list.slice(), destination = index + direction;
+    if (destination < 0 || destination >= list.length) return list;
+    [next[index], next[destination]] = [next[destination], next[index]];
+    return next;
+  });
+  const saveCustom = (d: string) => { setCustom(d); try { localStorage.setItem(BG_KEY, d); } catch { setNotice("Your image could not be saved. It will stay in this session."); } };
 
-  // drag the bottom-right grip to resize the whole widget
+  // Drag the bottom-right grip to resize. Uses the pointer position from when you pressed,
+  // so the size follows your cursor smoothly and never feeds back into itself.
   const grip = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    const el = e.currentTarget;
-    el.setPointerCapture(e.pointerId);
-    const x0 = e.screenX, s0 = S.scale, w0 = W * s0;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const x0 = e.screenX, y0 = e.screenY, s0 = S.scale, w0 = W * s0, h0 = H * s0;
+    let raf = 0;
     const move = (m: PointerEvent) => {
-      const s = Math.min(1.5, Math.max(0.7, (s0 * (w0 + (m.screenX - x0))) / w0));
-      set({ scale: Math.round(s * 100) / 100 });
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const k = ((w0 + (m.screenX - x0)) / w0 + (h0 + (m.screenY - y0)) / h0) / 2;
+        set({ scale: Math.round(Math.min(1.5, Math.max(0.7, s0 * k)) * 100) / 100 });
+      });
     };
-    const up = () => { el.removeEventListener("pointermove", move); el.removeEventListener("pointerup", up); };
-    el.addEventListener("pointermove", move);
-    el.addEventListener("pointerup", up);
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
   };
 
-  const bg = S.bg === "custom" ? (custom ? `url(${custom})` : "") : S.bg !== "none" ? bgUrl(S.bg) : "";
   const black = S.style === "black";
+  const bg = black ? "" : S.bg === "custom" ? (custom ? `url(${custom})` : "") : S.bg !== "none" ? bgUrl(S.bg) : "";
   const tint = black ? 1 : Math.max(0.04, 0.94 - 0.0088 * S.clear);
-  const key = (c: City) => keyOf(c);
-  const current = focus !== null ? cities[focus] : undefined;
   const vis = Math.min(n, 4);
-  const mini = mode === "mini";
 
   return (
     <div
       className={`shell ${black ? "black" : "glass"} m-${mode} ${inTauri ? "" : "web"}`}
-      style={{ width: W, height: H, zoom: S.scale, "--tint": tint } as React.CSSProperties}
+      style={{ ...(inTauri ? {} : { width: W, height: H }), "--tint": tint } as React.CSSProperties}
       onMouseEnter={over}
       onMouseLeave={out}
+      onKeyDown={(e) => { if (e.key === "Escape" && view === "rings") setFocus(null); }}
       onMouseDown={(e) => {
-        if (e.button === 0 && !S.lock && !(e.target as HTMLElement).closest("button,input,.ring-item,.hours,.results,.sbody,.grip")) drag();
+        // drag the widget from anywhere that isn't a control
+        if (e.button === 0 && !S.lock && !(e.target as HTMLElement).closest("button,input,a,.hours,.results,.sbody,.grip")) void drag().catch(reportNativeError);
       }}
     >
-      {!black && bg && <div className="bg" style={{ backgroundImage: bg, opacity: S.bgStrength / 100 }} />}
+      {bg && <div className="bg" style={{ backgroundImage: bg }} />}
       <div className="tint" />
       {!black && <div className="sheen" />}
 
-      {view === "picker" && <Picker cities={cities} utc={S.utc} onAdd={add} onRemove={remove} onClose={() => setView("rings")} />}
-      {view === "settings" && <Settings s={S} set={set} custom={custom} onCustom={saveCustom} onClose={() => setView("rings")} />}
+      {view === "picker" && <Picker cities={cities} utc={S.utc} weatherLocation={localWeatherPicker} onAdd={add} onRemove={remove} onMove={moveCity} onClose={closeView} />}
+      {view === "settings" && <Settings s={S} set={set} custom={custom} onCustom={saveCustom} local={cities.find((city) => city.kind === "local")} onChooseLocalWeather={chooseLocalWeather} onClose={closeView} />}
 
       {view === "rings" && (
         <>
-          {!mini && (
-            <div className="hud">
-              <button title="Add a city" onClick={() => setView("picker")}><Plus /></button>
-              <button title="Settings" onClick={() => setView("settings")}><Gear /></button>
-              <button title={S.pin === "desktop" ? "Pinned to desktop (click to float on top)" : "Floating on top (click to pin to desktop)"}
-                className={S.pin === "desktop" ? "lit" : ""} onClick={() => set({ pin: S.pin === "desktop" ? "float" : "desktop" })}><Pin on={S.pin === "desktop"} /></button>
-              {inTauri && <button title="Minimize" onClick={minimize}><Minus /></button>}
-              {inTauri && <button title="Close" onClick={closeApp}><Close /></button>}
-            </div>
-          )}
+          <div className="hud">
+            <button data-control="add" aria-label="Add a city" title="Add a city" onClick={() => { setLocalWeatherPicker(false); setView("picker"); }}><Plus /></button>
+            <button data-control="settings" aria-label="Settings" title="Settings" onClick={() => setView("settings")}><Gear /></button>
+            {inTauri && <button aria-label="Quit ORBIT" title="Quit ORBIT" onClick={() => { void closeApp().catch(reportNativeError); }}><Close /></button>}
+          </div>
           <div
-            className={`strip ${mini ? "mini" : ""}`} ref={strip}
-            style={{ width: (mini ? 72 : 120) * vis + 8 }}
-            onWheel={(e) => { if (!e.deltaX) strip.current?.scrollBy({ left: e.deltaY * 2, behavior: "smooth" }); }}
+            className="strip" ref={strip}
+            style={{ width: 120 * vis + 8 }}
+            onWheel={(e) => { if (!e.deltaX) strip.current?.scrollBy({ left: e.deltaY * 2, behavior: scrollBehavior() }); }}
           >
-            {cities.map((c, i) => (
-              <Ring key={key(c)} city={c} now={now} homeTz={home} fmt={fmt}
-                weather={S.weather ? weather[key(c)] : null} active={panelOpen && focus === i} onEnter={() => (mini ? over() : enter(i))} />
+            {cities.map((c) => (
+              <Ring key={keyOf(c)} city={c} now={now} homeTz={home} fmt={fmt}
+                weather={S.weather ? weather[keyOf(c)] : undefined} active={panelOpen && focus === c.id} onEnter={() => enter(c.id)} />
             ))}
           </div>
-          {panelOpen && current && <Panel key={key(current)} city={current} h24={S.h24} weather={S.weather ? weather[key(current)] : null} />}
-          {!mini && !S.lock && <div className="grip" title="Drag to resize" onPointerDown={grip} />}
+          {panelOpen && current && (
+            <Panel key={keyOf(current)} city={current} now={now} home={home} h24={S.h24} utc={S.utc} weatherOn={S.weather} weather={cw} onChooseWeather={chooseLocalWeather} />
+          )}
+          {!S.lock && <div className="grip" title="Drag to resize" onPointerDown={grip} />}
         </>
       )}
+      {message && <div className="notice" role="status"><span>{message}</span><button aria-label="Dismiss message" onClick={() => {
+        if (nativeError) setNativeError(null); else if (notice) setNotice(null); else dismissSettingsError(true);
+      }}>×</button></div>}
     </div>
   );
 }

@@ -1,30 +1,45 @@
-// Thin wrapper so the UI also runs in a plain browser (npm run dev) for quick design work.
-export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { layoutQueue } from "../platform/layout.ts";
+
+export const inTauri = isTauri();
+let platform: Promise<string> | undefined;
+export function getPlatform(): Promise<string> {
+  if (!inTauri) return Promise.resolve("browser");
+  if (!platform) platform = invoke<string>("runtime_platform").catch((error) => { platform = undefined; throw error; });
+  return platform;
+}
 
 async function w() {
   const m = await import("@tauri-apps/api/window");
   return { win: m.getCurrentWindow(), Size: m.LogicalSize };
 }
 
-export async function resize(width: number, height: number) {
-  if (!inTauri) return;
+/**
+ * Sizes the window AND zooms the page by the same factor, so the layout always fills the window
+ * exactly (no gaps or misaligned glass while resizing).
+ */
+const applyLayout = layoutQueue(async ({ scale, width, height }) => {
+  if (!inTauri) { document.body.style.setProperty("zoom", String(scale)); return; }
+  const platform = await getPlatform();
+  if (platform === "android" || platform === "ios") return;
+  const { getCurrentWebview } = await import("@tauri-apps/api/webview");
   const { win, Size } = await w();
-  await win.setSize(new Size(Math.round(width), Math.round(height)));
-}
-export async function drag() { if (inTauri) (await w()).win.startDragging(); }
-export async function closeApp() { if (inTauri) (await w()).win.close(); }
-export async function minimize() { if (inTauri) (await w()).win.minimize(); }
+  await getCurrentWebview().setZoom(scale);
+  await win.setSize(new Size(Math.round(width * scale), Math.round(height * scale)));
+});
+export function setLayout(scale: number, width: number, height: number) { return applyLayout({ scale, width, height }); }
+export async function drag() { if (inTauri) await (await w()).win.startDragging(); }
+export async function closeApp() { if (inTauri) await (await w()).win.close(); }
 
-/** float = always above other apps; desktop = sits on the desktop behind your windows. */
-export async function setPin(mode: "float" | "desktop") {
-  if (!inTauri) return;
+/** Widget behavior: sit on the desktop, behind your other windows. */
+export async function pinToDesktop() {
+  if (await getPlatform() !== "windows") return;
   const { win } = await w();
-  if (mode === "float") { await win.setAlwaysOnBottom(false); await win.setAlwaysOnTop(true); }
-  else { await win.setAlwaysOnTop(false); await win.setAlwaysOnBottom(true); }
+  await win.setAlwaysOnTop(false);
+  await win.setAlwaysOnBottom(true);
 }
 
 export async function setBlur(enabled: boolean) {
-  if (!inTauri) return;
-  const { invoke } = await import("@tauri-apps/api/core");
+  if (await getPlatform() !== "windows") return;
   await invoke("set_blur", { enabled });
 }
