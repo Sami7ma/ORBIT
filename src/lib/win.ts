@@ -73,12 +73,8 @@ export async function observeWindowSize(onResize: (width: number, height: number
 export async function drag() { if (inTauri) await (await w()).win.startDragging(); }
 export async function closeApp() { if (inTauri) await (await w()).win.close(); }
 
-/** Widget behavior: sit on the desktop, behind your other windows. */
-export async function pinToDesktop() {
-  if (await getPlatform() !== "windows") return;
-  const { win } = await w();
-  await win.setAlwaysOnTop(false);
-  await win.setAlwaysOnBottom(true);
+export async function setPinned(enabled: boolean) {
+  if (inTauri) await invoke("set_pinned", { enabled });
 }
 
 export async function setBlur(enabled: boolean) {

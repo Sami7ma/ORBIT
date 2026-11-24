@@ -5,7 +5,7 @@ import Picker from "./components/Picker";
 import Settings from "./components/Settings";
 import ResizeHandles from "./components/ResizeHandles";
 import { fitViewport, viewportBounds, viewportRows, type Viewport } from "./platform/viewport.ts";
-import { Close, Gear, Plus } from "./components/Icons";
+import { Close, Gear, Plus, Lock, Pin } from "./components/Icons";
 import { type City } from "./lib/cities";
 import { withLocalWeather } from "./domain/city.ts";
 import { useClock } from "./hooks/useClock.ts";
@@ -14,7 +14,7 @@ import { bgUrl } from "./lib/backgrounds";
 import { keyOf } from "./lib/search";
 import { useSettings } from "./lib/settings";
 import { useWeather } from "./lib/weather";
-import { closeApp, drag, inTauri, pinToDesktop, setBlur, setLayout, observeWindowSize } from "./lib/win";
+import { closeApp, drag, inTauri, setPinned, setBlur, setLayout, observeWindowSize } from "./lib/win";
 
 const BG_KEY = "orbit.bg.custom";
 const scrollBehavior = (): ScrollBehavior => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
@@ -36,6 +36,7 @@ export default function App() {
   const [focus, setFocus] = useState<string | null>(null);
   const [localWeatherPicker, setLocalWeatherPicker] = useState(false);
   const [nativeError, setNativeError] = useState<string | null>(null);
+  const [pinBusy, setPinBusy] = useState(true);
   const [dismissedSettingsError, dismissSettingsError] = useState(false);
   const leave = useRef<number>();
   const strip = useRef<HTMLDivElement>(null);
@@ -45,7 +46,17 @@ export default function App() {
     console.error("ORBIT window operation failed", error);
     setNativeError("A window setting could not be applied. Try reopening ORBIT.");
   }, []);
-  useEffect(() => { void pinToDesktop().catch(reportNativeError); }, [reportNativeError]);
+  useEffect(() => {
+    let current = true;
+    setPinBusy(true);
+    void setPinned(S.pinned).catch((error) => {
+      if (!current) return;
+      console.error("ORBIT pin could not be applied", error);
+      setNativeError("Always on top could not be applied. Try the pin again.");
+      if (S.pinned) set({ pinned: false });
+    }).finally(() => { if (current) setPinBusy(false); });
+    return () => { current = false; };
+  }, [S.pinned, set]);
   useEffect(() => { void setBlur(S.blur && S.style === "glass").catch(reportNativeError); }, [S.blur, S.style, reportNativeError]);
   useEffect(() => () => clearTimeout(leave.current), []);
 
@@ -154,7 +165,11 @@ export default function App() {
 
       {view === "rings" && (
         <>
-          <div className="hud">
+          <div className={`hud quick-controls ${S.lock || S.pinned ? "has-active" : ""}`}>
+            <button aria-label="Lock position" aria-pressed={S.lock} title={S.lock ? "Unlock position and resizing" : "Lock position and resizing"} className={S.lock ? "lit" : ""} onClick={() => set({ lock: !S.lock })}><Lock on={S.lock} /></button>
+            <button aria-label="Always on top" aria-pressed={S.pinned} title={S.pinned ? "Unpin from top" : "Keep above other windows"} disabled={pinBusy} className={S.pinned ? "lit" : ""} onClick={() => set({ pinned: !S.pinned })}><Pin on={S.pinned} /></button>
+          </div>
+          <div className="hud main-controls">
             <button data-control="add" aria-label="Add a city" title="Add a city" onClick={() => { setLocalWeatherPicker(false); setFocus(null); setView("picker"); }}><Plus /></button>
             <button data-control="settings" aria-label="Settings" title="Settings" onClick={() => { setFocus(null); setView("settings"); }}><Gear /></button>
             {inTauri && <button aria-label="Quit ORBIT" title="Quit ORBIT" onClick={() => { void closeApp().catch(reportNativeError); }}><Close /></button>}

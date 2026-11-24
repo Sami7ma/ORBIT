@@ -29,3 +29,9 @@ test("viewport preferences migrate independently of clock scale and reject damag
   assert.equal(narrow.viewportWidth, 160);
   assert.equal(narrow.scale, 1);
 });
+
+test("quick lock and pin preferences are independent and older profiles start unpinned", () => {
+  assert.equal(cleanSettings({ lock: true }).pinned, false);
+  assert.equal(cleanSettings({ lock: true, pinned: true }).pinned, true);
+  assert.equal(cleanSettings({ pinned: "yes" }).pinned, false);
+});

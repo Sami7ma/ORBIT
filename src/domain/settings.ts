@@ -7,6 +7,7 @@ export type Settings = {
   viewportWidth: number;
   viewportHeight: number;
   lock: boolean;
+  pinned: boolean;
   h24: boolean;
   ampm: boolean;
   utc: boolean;
@@ -15,7 +16,7 @@ export type Settings = {
 };
 
 export const DEFAULTS: Settings = {
-  style: "glass", clear: 60, blur: true, bg: "none", scale: 1, lock: false,
+  style: "glass", clear: 60, blur: true, bg: "none", scale: 1, lock: false, pinned: false,
   viewportWidth: 520, viewportHeight: 188,
   h24: false, ampm: true, utc: false, weather: true, temperatureUnit: "celsius",
 };

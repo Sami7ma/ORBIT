@@ -1,14 +1,49 @@
 use tauri::Manager;
-#[cfg(target_os = "windows")]
 use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "windows")]
 #[derive(Default)]
 struct RevealState(AtomicBool);
 
+#[cfg(target_os = "linux")]
+mod kwin;
+
+#[derive(Default)]
+struct PinState(AtomicBool);
+
 #[tauri::command]
 fn runtime_platform() -> &'static str {
     std::env::consts::OS
+}
+
+#[tauri::command]
+async fn set_pinned(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    #[cfg(desktop)]
+    {
+        let window = app.get_webview_window("main").ok_or("Main window is unavailable")?;
+        #[cfg(target_os = "windows")]
+        {
+            app.state::<RevealState>().0.store(false, Ordering::Relaxed);
+            window.set_always_on_bottom(false).map_err(|error| error.to_string())?;
+            window.set_always_on_top(enabled).map_err(|error| error.to_string())?;
+            if !enabled { window.set_always_on_bottom(true).map_err(|error| error.to_string())?; }
+        }
+        #[cfg(target_os = "linux")]
+        {
+            if kwin::is_kde_wayland() {
+                tauri::async_runtime::spawn_blocking(move || kwin::set_pinned(std::process::id(), enabled))
+                    .await.map_err(|error| error.to_string())??;
+            } else {
+                window.set_always_on_top(enabled).map_err(|error| error.to_string())?;
+            }
+        }
+        #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+        window.set_always_on_top(enabled).map_err(|error| error.to_string())?;
+        app.state::<PinState>().0.store(enabled, Ordering::Relaxed);
+        Ok(())
+    }
+    #[cfg(mobile)]
+    { let _ = (app, enabled); Err("Always on top is available on desktop".into()) }
 }
 
 /// Turns the native Windows Acrylic blur (the desktop showing through) on or off.
@@ -50,12 +85,14 @@ pub fn run() {
     }
 
     builder
-        .invoke_handler(tauri::generate_handler![set_blur, runtime_platform])
+        .manage(PinState::default())
+        .invoke_handler(tauri::generate_handler![set_blur, runtime_platform, set_pinned])
         .on_window_event(|window, event| {
             // Showing the desktop widget temporarily raises it; return it behind other
             // windows after the user leaves, rather than permanently changing its mode.
             #[cfg(target_os = "windows")]
             if matches!(event, tauri::WindowEvent::Focused(false))
+                && !window.state::<PinState>().0.load(Ordering::Relaxed)
                 && window.state::<RevealState>().0.swap(false, Ordering::Relaxed)
             {
                 if let Err(error) = window.set_always_on_bottom(true) {
@@ -84,13 +121,15 @@ pub fn run() {
                                 {
                                     let _ = w.set_always_on_bottom(false);
                                     let _ = w.set_always_on_top(true);
-                                    let _ = w.set_always_on_top(false);
+                                    if !app.state::<PinState>().0.load(Ordering::Relaxed) {
+                                        let _ = w.set_always_on_top(false);
+                                    }
                                 }
                                 if let Err(error) = w.unminimize().and_then(|_| w.show()).and_then(|_| w.set_focus()) {
                                     eprintln!("ORBIT could not reveal its window: {error}");
                                 }
                                 #[cfg(target_os = "windows")]
-                                app.state::<RevealState>().0.store(true, Ordering::Relaxed);
+                                app.state::<RevealState>().0.store(!app.state::<PinState>().0.load(Ordering::Relaxed), Ordering::Relaxed);
                             }
                         }
                         "quit" => app.exit(0),

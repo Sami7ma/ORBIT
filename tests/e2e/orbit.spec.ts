@@ -38,7 +38,8 @@ test("keeps ring design, opens details with keyboard, and updates after an hour'
   await page.keyboard.press("Enter");
   await expect(page.getByRole("region", { name: "Local details" })).toBeVisible();
   await expect(local).toHaveAttribute("aria-expanded", "true");
-  await expect(page.locator(".hud")).toHaveCSS("opacity", "1");
+  await expect(page.locator(".main-controls")).toHaveCSS("opacity", "1");
+  await expect(page.locator(".quick-controls")).toHaveCSS("opacity", "1");
   await page.clock.fastForward(3_600_000);
   await expect(local).toHaveAccessibleName(/4:15 PM/);
   expect(errors).toEqual([]);
@@ -258,4 +259,24 @@ test("resizes the visible area to one city, keeps other clocks scrollable and re
   await page.getByRole("switch", { name: "Lock position" }).click();
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("separator")).toHaveCount(0);
+});
+
+test("quick lock and pin controls work without Settings and survive a restart", async ({ page }) => {
+  await open(page);
+  const lock = page.getByRole("button", { name: "Lock position", exact: true });
+  const pin = page.getByRole("button", { name: "Always on top", exact: true });
+  await page.locator(".shell").hover();
+  await lock.click();
+  await expect(lock).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("separator")).toHaveCount(0);
+  await pin.click();
+  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".settings")).toHaveCount(0);
+  await page.reload();
+  await expect(lock).toHaveAttribute("aria-pressed", "true");
+  await expect(pin).toHaveAttribute("aria-pressed", "true");
+  await lock.click();
+  await expect(page.getByRole("separator")).toHaveCount(8);
+  await pin.click();
+  await expect(pin).toHaveAttribute("aria-pressed", "false");
 });
