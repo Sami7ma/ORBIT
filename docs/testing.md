@@ -32,3 +32,17 @@ The source snapshot had icons but no original app screenshots. The reference ima
 | Security | Packaged CSP permits local scripts, IPC and the two API hosts while rejecting other remote scripts |
 
 The workflow under `.github/workflows/check.yml` runs frontend checks on Linux and Windows, browser checks on Ubuntu, and native compilation on Linux and Windows. Adding the workflow is not evidence that those remote jobs have already run. The existing Cargo.lock from the GitHub repository is retained. A native build must verify that it remains compatible with the tray-enabled manifest before release.
+
+## Fedora native build environment
+
+On Fedora 44 KDE, the development prerequisites were installed on 2026-11-24.
+The available toolchain is Cargo 1.100.0, rustc 1.100.0, WebKitGTK 4.1 version
+2.54.2 and GTK 3.24.52. Installing these prerequisites enables native compilation;
+it does not establish that compilation, RPM installation or desktop behavior passes.
+
+```sh
+cargo --version
+rustc --version
+pkg-config --modversion webkit2gtk-4.1 gtk+-3.0
+npm run tauri -- build -- --locked
+```

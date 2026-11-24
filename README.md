@@ -2,7 +2,7 @@
 
 A glass world-clock widget built with Tauri 2, Rust, React and TypeScript. Each ring shows progress through a city's local day, with optional weather scenes inside and an expandable forecast below.
 
-![ORBIT browser preview](docs/screenshots/browser-overview.png)
+![ORBIT world clocks with day-progress rings for Local, New York, London and Tokyo](docs/screenshots/browser-overview.png)
 
 The images in this README are current **browser development previews**, captured with a fixed sample clock and mocked weather. They are not native Windows/Fedora screenshots. See [screenshot provenance and verification](docs/testing.md).
 
@@ -59,8 +59,8 @@ The Windows window has no taskbar button. Its tray menu provides **Show ORBIT** 
 Install Rust and the Fedora build dependencies described by [Tauri](https://v2.tauri.app/start/prerequisites/). For a conventional Fedora installation, the dependency list includes:
 
 ```sh
-sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file \
-  libappindicator-gtk3-devel librsvg2-devel libxdo-devel gcc gcc-c++ make
+sudo dnf install rust cargo webkit2gtk4.1-devel openssl-devel curl wget file \
+  libappindicator-gtk3-devel librsvg2-devel libxdo-devel gcc gcc-c++ make patchelf
 ```
 
 Then use `npm run tauri -- dev` or `npm run tauri -- build`. The Linux override targets RPM. This configuration is prepared for native validation; an RPM has not yet been built or installed in this workspace.
@@ -78,7 +78,13 @@ Linux starts as a taskbar-visible window and does not receive Windows-only deskt
 - Choose Celsius or Fahrenheit. Missing temperatures display an em dash, and retained forecasts show their age and refresh status.
 - **Local** follows the device timezone. Select its weather location explicitly in Settings or its details panel. Timezones alone do not identify a weather location.
 
-![ORBIT forecast preview](docs/screenshots/browser-forecast.png)
+## Interface previews
+
+| Forecast | City management |
+| --- | --- |
+| ![Expanded clock with hourly forecast](docs/screenshots/browser-forecast.png) | ![City search and selected clock ordering](docs/screenshots/browser-cities.png) |
+
+Browser previews use sample weather and a fixed clock; native desktop verification is tracked separately.
 
 More browser references: [appearance settings](docs/screenshots/browser-settings.png), [weather settings](docs/screenshots/browser-weather-settings.png), [city management](docs/screenshots/browser-cities.png), and [solid appearance](docs/screenshots/browser-solid.png).
 
