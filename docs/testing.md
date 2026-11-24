@@ -64,7 +64,7 @@ other Fedora versions have not been established as supported.
 | RPM dependencies | All three declared library providers are installed; `ldd` reports no unresolved libraries on this machine |
 | Desktop entry | `desktop-file-validate` passes |
 | RPM executable | Matches the release executable except for Tauri's documented-in-source RPM bundle-type marker |
-| Native startup | RPM executable launched with an isolated temporary profile; process remained running. Visual and interaction verification awaits manual confirmation |
+| Native startup | User confirmed the native window appears in Fedora KDE using the isolated test profile. Detailed interaction, rendering, scaling and tray recovery checks remain pending |
 | System installation and upgrades | Pending; inspecting and launching an extracted RPM is not an installed-package test |
 | Windows desktop interaction | Pending on a real Windows desktop |
 

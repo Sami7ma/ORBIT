@@ -41,6 +41,7 @@ This file records delivered code separately from platform verification. It follo
 
 - [x] Install Rust and the WebKitGTK/GTK development prerequisites on Fedora 44.
 - [x] Generate an RPM with populated application metadata and no Rust compiler warnings.
+- [x] Confirm the native test window appears in the Fedora KDE session (user-reported smoke check).
 - [ ] Verify normal-window behavior, tray recovery and scaling on Wayland.
 - [ ] Test RPM installation, upgrades and removal on supported Fedora versions.
 - [ ] Capture actual Fedora screenshots.
