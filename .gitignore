@@ -30,3 +30,7 @@ desktop.ini
 !.vscode/extensions.json
 .idea/
 *.swp
+
+# browser verification output
+test-results/
+playwright-report/

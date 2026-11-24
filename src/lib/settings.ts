@@ -1,35 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
+import { cleanSettings, DEFAULTS, SETTINGS_KEY, type Settings } from "../domain/settings.ts";
+import { preserveBackup } from "../platform/storage.ts";
+export { DEFAULTS, type Settings } from "../domain/settings.ts";
 
-export type Settings = {
-  style: "glass" | "black";
-  clear: number;        // 0 (dense) .. 100 (most see-through)
-  blur: boolean;        // blur the desktop behind the widget
-  bg: string;           // "none" | built-in id | "custom"
-  bgStrength: number;   // 20..100
-  scale: number;        // 0.7 .. 1.5
-  minimal: boolean;     // collapse to tiny rings until hovered
-  pin: "float" | "desktop";
-  lock: boolean;        // stop the widget from being dragged
-  h24: boolean;
-  ampm: boolean;
-  utc: boolean;         // label offsets as UTC instead of GMT
-  weather: boolean;
-};
-
-export const DEFAULTS: Settings = {
-  style: "glass", clear: 60, blur: true, bg: "none", bgStrength: 75,
-  scale: 1, minimal: false, pin: "float", lock: false,
-  h24: false, ampm: true, utc: false, weather: true,
-};
-
-const KEY = "orbit.settings.v1";
-
-export function useSettings(): [Settings, (p: Partial<Settings>) => void] {
-  const [s, setS] = useState<Settings>(() => {
-    try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; }
-    catch { return DEFAULTS; }
+export function useSettings(): [Settings, (patch: Partial<Settings>) => void, string | null] {
+  const [state, setState] = useState(() => {
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(SETTINGS_KEY);
+      return { settings: cleanSettings(JSON.parse(raw || "{}")), error: null as string | null, backup: null as string | null };
+    } catch { return { settings: { ...DEFAULTS }, error: "Saved settings could not be read. Defaults are in use.", backup: raw }; }
   });
-  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } }, [s]);
-  const set = useCallback((p: Partial<Settings>) => setS((o) => ({ ...o, ...p })), []);
-  return [s, set];
+  useEffect(() => {
+    try {
+      if (state.backup !== null) preserveBackup(localStorage, `${SETTINGS_KEY}.backup`, state.backup);
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+    }
+    catch { setState((previous) => previous.error ? previous : { ...previous, error: "Settings could not be saved. They will stay in this session." }); }
+  }, [state.settings, state.backup]);
+  const set = useCallback((patch: Partial<Settings>) => setState((previous) => ({ ...previous, settings: cleanSettings({ ...previous.settings, ...patch }) })), []);
+  return [state.settings, set, state.error];
 }
