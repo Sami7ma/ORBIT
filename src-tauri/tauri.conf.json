@@ -36,6 +36,9 @@
       "icons/128x128.png",
       "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "shortDescription": "World clocks with day-progress rings and optional weather",
+    "longDescription": "ORBIT displays local and world times as day-progress rings, with configurable appearance, city management and optional weather forecasts.",
+    "category": "Utility"
   }
 }

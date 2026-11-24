@@ -1,6 +1,8 @@
 use tauri::Manager;
+#[cfg(target_os = "windows")]
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[cfg(target_os = "windows")]
 #[derive(Default)]
 struct RevealState(AtomicBool);
 
@@ -32,6 +34,11 @@ fn set_blur(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
 pub fn run() {
     let mut builder = tauri::Builder::default();
 
+    #[cfg(target_os = "windows")]
+    {
+        builder = builder.manage(RevealState::default());
+    }
+
     // Remembers where you left the widget on screen.
     #[cfg(desktop)]
     {
@@ -43,7 +50,6 @@ pub fn run() {
     }
 
     builder
-        .manage(RevealState::default())
         .invoke_handler(tauri::generate_handler![set_blur, runtime_platform])
         .on_window_event(|window, event| {
             // Showing the desktop widget temporarily raises it; return it behind other
