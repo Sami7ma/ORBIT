@@ -1,6 +1,6 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { ResizeEdge } from "../platform/viewport.ts";
-import { layoutQueue, type WindowBounds } from "../platform/layout.ts";
+import { layoutQueue, windowSizeTracker, type WindowBounds } from "../platform/layout.ts";
 
 export const inTauri = isTauri();
 let platform: Promise<string> | undefined;
@@ -22,7 +22,7 @@ async function w() {
 let applyingLayout = 0;
 let lastZoom: number | undefined;
 let lastBounds = "";
-let requestedSize: { width: number; height: number } | undefined;
+const sizeTracker = windowSizeTracker();
 const applyLayout = layoutQueue(async ({ scale, width, height, bounds }) => {
   if (!inTauri) { document.body.style.setProperty("zoom", String(scale)); return; }
   const platform = await getPlatform();
@@ -30,7 +30,7 @@ const applyLayout = layoutQueue(async ({ scale, width, height, bounds }) => {
   const { getCurrentWebview } = await import("@tauri-apps/api/webview");
   const { win, Size } = await w();
   applyingLayout++;
-  requestedSize = { width: Math.round(width * scale), height: Math.round(height * scale) };
+  sizeTracker.expect({ width: Math.round(width * scale), height: Math.round(height * scale) });
   try {
     if (lastZoom !== scale) { await getCurrentWebview().setZoom(scale); lastZoom = scale; }
     const nextBounds = JSON.stringify([scale, bounds]);
@@ -61,7 +61,7 @@ export async function observeWindowSize(onResize: (width: number, height: number
     if (disposed) return;
     if (applyingLayout) { timer = setTimeout(() => { void read(); }, 50); return; }
     const width = size.width / dpi, height = size.height / dpi;
-    if (requestedSize && Math.abs(width - requestedSize.width) <= 1 && Math.abs(height - requestedSize.height) <= 1) return;
+    if (!sizeTracker.accept({ width, height })) return;
     onResize(width, height);
   };
   const stop = await win.onResized(() => {

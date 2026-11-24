@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { layoutQueue } from "../../src/platform/layout.ts";
+import { layoutQueue, windowSizeTracker } from "../../src/platform/layout.ts";
 
 test("window layout calls are serialized and only the newest queued layout runs", async () => {
   const applied = [];
@@ -45,4 +45,14 @@ test("one-city layouts fit the clock instead of reserving three empty columns", 
   assert.equal(viewportRows(188), 1);
   assert.equal(viewportRows(347), 1);
   assert.equal(viewportRows(348), 2);
+});
+
+
+test("native resize tracking accepts a manual return to an earlier programmed size", () => {
+  const tracker = windowSizeTracker();
+  tracker.expect({ width: 520, height: 188 });
+  assert.equal(tracker.accept({ width: 520, height: 188 }), false);
+  assert.equal(tracker.accept({ width: 160, height: 188 }), true);
+  assert.equal(tracker.accept({ width: 520, height: 188 }), true);
+  assert.equal(tracker.accept({ width: 520.4, height: 188.2 }), false);
 });

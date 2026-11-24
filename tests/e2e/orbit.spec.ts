@@ -234,6 +234,8 @@ test("resizes the visible area to one city, keeps other clocks scrollable and re
   await page.mouse.move(box!.x - 450, box!.y + box!.height / 2, { steps: 6 });
   await page.mouse.up();
   await expect(shell).toHaveCSS("width", "160px");
+  await expect(edge).toHaveAttribute("aria-valuenow", "160");
+  await expect(edge).toHaveAttribute("aria-valuetext", "160 by 188 pixels");
   await expect(shell).toHaveCSS("height", "188px");
   await expect(page.locator(".panel")).toHaveCount(0);
   const local = page.getByRole("button", { name: /^Local,/ });

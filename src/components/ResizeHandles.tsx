@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { inTauri, resizeWindow } from "../lib/win";
-import { resizeViewport, type ResizeEdge, type Viewport } from "../platform/viewport.ts";
+import { resizeViewport, viewportBounds, type ResizeEdge, type Viewport } from "../platform/viewport.ts";
 
 const edges: [ResizeEdge, string][] = [
   ["North", "top"], ["South", "bottom"], ["East", "right"], ["West", "left"],
@@ -10,6 +10,7 @@ type Props = { viewport: Viewport; count: number; scale: number; onResize: (size
 
 export default function ResizeHandles({ viewport, count, scale, onResize, onError }: Props) {
   const cleanup = useRef<() => void>();
+  const bounds = viewportBounds(count);
   useEffect(() => () => cleanup.current?.(), []);
   const begin = (event: React.PointerEvent, edge: ResizeEdge) => {
     if (event.button !== 0) return;
@@ -26,6 +27,10 @@ export default function ResizeHandles({ viewport, count, scale, onResize, onErro
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", finish);
   };
   return <>{edges.map(([edge, label]) => <div key={edge} role="separator" tabIndex={0}
+    aria-valuenow={edge === "North" || edge === "South" ? viewport.height : viewport.width}
+    aria-valuemin={edge === "North" || edge === "South" ? bounds.minHeight : bounds.minWidth}
+    aria-valuemax={edge === "North" || edge === "South" ? bounds.maxHeight : bounds.maxWidth}
+    aria-valuetext={`${viewport.width} by ${viewport.height} pixels`}
     aria-label={`Resize from ${label}`} aria-orientation={edge === "North" || edge === "South" ? "horizontal" : "vertical"}
     className={`resize-edge resize-${edge.toLowerCase()}`} title={`Resize from ${label}; arrow keys also work`}
     onPointerDown={(event) => begin(event, edge)} onKeyDown={(event) => {
