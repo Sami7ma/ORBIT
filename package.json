@@ -8,7 +8,9 @@
     "build": "npm run typecheck && vite build",
     "tauri": "tauri",
     "typecheck": "tsc --noEmit && tsc --project tsconfig.tools.json",
-    "test": "node --experimental-strip-types --test --experimental-test-isolation=none tests/unit/cities.test.mjs tests/unit/time.test.mjs tests/unit/weather.test.mjs tests/unit/settings.test.mjs tests/unit/layout.test.mjs"
+    "test": "node --experimental-strip-types --test --experimental-test-isolation=none tests/unit/cities.test.mjs tests/unit/time.test.mjs tests/unit/weather.test.mjs tests/unit/settings.test.mjs tests/unit/layout.test.mjs",
+    "test:e2e": "playwright test",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
