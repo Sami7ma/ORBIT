@@ -19,7 +19,10 @@ This file records delivered code separately from platform verification. It follo
 - [x] Serialize native layout calls and restrict Windows effects to Windows.
 - [x] Separate Windows/Linux packaging and add a production CSP.
 - [x] Add unit and browser regression suites and a CI workflow.
-- [x] Pass 28 unit regressions, 8 Chromium interaction checks, and application/tooling type checks with a production frontend build.
+- [x] Pass 33 unit regressions, 12 Chromium interaction checks, and application/tooling type checks with a production frontend build.
+- [x] Keep idle clocks compact, make center activation explicit and retain weather state badges.
+- [x] Add persistent top-left lock and pin controls; verify KDE keep-above enable/disable through the native helper.
+- [x] Resize the visible area from all edges/corners with one-clock bounds and independent clock scale.
 - [x] Capture browser-preview design references with documented mock-data provenance.
 - [x] Compile Windows and generate its NSIS installer in CI.
 - [x] Build the Fedora 44 x86_64 RPM and validate its desktop entry and declared library providers.
@@ -42,6 +45,7 @@ This file records delivered code separately from platform verification. It follo
 - [x] Install Rust and the WebKitGTK/GTK development prerequisites on Fedora 44.
 - [x] Generate an RPM with populated application metadata and no Rust compiler warnings.
 - [x] Confirm the native test window appears in the Fedora KDE session (user-reported smoke check).
+- [x] Confirm compact activation, persistent weather and one-city resize/scroll behavior (user-reported check).
 - [ ] Verify normal-window behavior, tray recovery and scaling on Wayland.
 - [ ] Test RPM installation, upgrades and removal on supported Fedora versions.
 - [ ] Capture actual Fedora screenshots.

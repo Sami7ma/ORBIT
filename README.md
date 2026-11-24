@@ -82,12 +82,15 @@ Linux starts as a taskbar-visible window and does not receive Windows-only deskt
 
 ## Use ORBIT
 
-- Open a ring by pointing, clicking, tapping or focusing it with the keyboard. Escape closes its details.
-- Reveal the control pill by hover or keyboard focus. Use **Add a city** or **Settings**.
+- Click or tap the center of a clock for details, or focus it and press Enter/Space. Hovering and scrolling keep the widget compact. Escape, the close button, leaving the widget or switching away closes details.
+- The top-left **lock** toggles movement and resizing; the **pin** keeps ORBIT above other windows. Both preferences persist across launches. Active controls stay visible.
+- Reveal the other controls by hover or keyboard focus. Use **Add a city** or **Settings**.
 - Add cities with offline search, timezone names, UTC or worldwide search. Unaccented search such as `Montreal` matches `Montréal`.
 - Use the arrow buttons in the city picker to reorder selected clocks. At least one clock remains selected.
-- Scroll horizontally through more than four rings. Drag the widget background to move it, or the bottom-right grip to change scale. Lock position prevents accidental dragging.
+- Drag any edge or corner to resize the visible city area, down to one complete clock. Taller areas add rows; scroll horizontally to reach the remaining cities. Resize handles also respond to arrow keys.
+- Drag the widget background to move it. **Widget size** in Settings changes clock scale independently. **Lock position** disables both moving and resizing.
 - Choose glass or solid black, background scenes or a custom image, scale, 12/24-hour time, AM/PM and UTC/GMT labels.
+- Weather badges stay visible while enabled, including loading, unavailable and saved-data indicators. Fresh weather animates inside the rings; turn **Show weather** off to hide badges, scenes and forecasts.
 - Choose Celsius or Fahrenheit. Missing temperatures display an em dash, and retained forecasts show their age and refresh status.
 - **Local** follows the device timezone. Select its weather location explicitly in Settings or its details panel. Timezones alone do not identify a weather location.
 
@@ -99,11 +102,11 @@ Linux starts as a taskbar-visible window and does not receive Windows-only deskt
 
 Browser previews use sample weather and a fixed clock; native desktop verification is tracked separately.
 
-More browser references: [appearance settings](docs/screenshots/browser-settings.png), [weather settings](docs/screenshots/browser-weather-settings.png), [city management](docs/screenshots/browser-cities.png), and [solid appearance](docs/screenshots/browser-solid.png).
+More browser references: [appearance settings](docs/screenshots/browser-settings.png), [weather settings](docs/screenshots/browser-weather-settings.png), [city management](docs/screenshots/browser-cities.png), [solid appearance](docs/screenshots/browser-solid.png), [one-city viewport](docs/screenshots/browser-single-city.png), and [two-row viewport](docs/screenshots/browser-two-rows.png).
 
 ## Saved data and offline use
 
-The clock and bundled search work offline. Weather is optional and cached in memory; a new offline launch has no saved forecast. Network failures keep the last successful forecast for the running session, label it as saved, and suppress stale scenes/badges.
+The clock and bundled search work offline. Weather is optional and cached in memory; a new offline launch has no saved forecast. Network failures keep the last successful forecast for the running session, label it as saved, keep a marked weather badge, and suppress stale animated scenes.
 
 Existing city lists migrate to version 3. Valid cities are retained, damaged entries are repaired, and original data is backed up before replacement. Legacy inferred Local weather coordinates require a new explicit selection. Unknown future schemas remain untouched and use temporary session defaults.
 
