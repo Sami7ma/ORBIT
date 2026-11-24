@@ -21,10 +21,12 @@ This file records delivered code separately from platform verification. It follo
 - [x] Add unit and browser regression suites and a CI workflow.
 - [x] Pass 28 unit regressions, 8 Chromium interaction checks, and application/tooling type checks with a production frontend build.
 - [x] Capture browser-preview design references with documented mock-data provenance.
-- [ ] Build and verify native Windows behavior.
-- [ ] Build and install the Fedora RPM in a real KDE Wayland session.
+- [x] Compile Windows and generate its NSIS installer in CI.
+- [x] Build the Fedora 44 x86_64 RPM and validate its desktop entry and declared library providers.
+- [ ] Verify Windows installer and native desktop behavior.
+- [ ] Install the Fedora RPM and verify the interface in a real KDE Wayland session.
 - [x] Retain the existing Cargo.lock from the GitHub repository.
-- [ ] Verify the retained Rust lockfile against the tray-enabled manifest during a native build.
+- [x] Verify the retained Rust lockfile against the tray-enabled manifest with a locked Fedora native build.
 
 ## Windows completion
 
@@ -38,6 +40,7 @@ This file records delivered code separately from platform verification. It follo
 ## Fedora completion
 
 - [x] Install Rust and the WebKitGTK/GTK development prerequisites on Fedora 44.
+- [x] Generate an RPM with populated application metadata and no Rust compiler warnings.
 - [ ] Verify normal-window behavior, tray recovery and scaling on Wayland.
 - [ ] Test RPM installation, upgrades and removal on supported Fedora versions.
 - [ ] Capture actual Fedora screenshots.

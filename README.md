@@ -11,8 +11,8 @@ The images in this README are current **browser development previews**, captured
 | Surface | Status |
 | --- | --- |
 | Browser preview | Shared interface, clock, city management and weather states implemented; automated browser checks |
-| Windows desktop | Native tray/acrylic/position code and NSIS configuration; native validation still required |
-| Fedora desktop | RPM configuration, taskbar-visible default, Windows-only effects skipped; native build and Wayland validation still required |
+| Windows desktop | Native compilation and NSIS generation passed in CI; installer and desktop behavior checks remain |
+| Fedora desktop | Fedora 44 RPM built with locked dependencies; installation and KDE Wayland interaction checks remain |
 | Plasma 6 widget | Planned native QML surface |
 | Android / iOS | Planned mobile adaptation and native home-screen widget integrations |
 
@@ -52,7 +52,7 @@ npm run tauri -- build
 
 The Windows override targets NSIS. The release executable is under `src-tauri/target/release/`, with the installer under its `bundle/nsis/` directory.
 
-The Windows window has no taskbar button. Its tray menu provides **Show ORBIT** and **Quit ORBIT**. Desktop stacking is an application-window behavior: verify Win+D and tray recovery on your setup. The new reveal/restoration path is pending native Windows verification.
+The Windows window has no taskbar button. Its tray menu provides **Show ORBIT** and **Quit ORBIT**. Desktop stacking is an application-window behavior: verify Win+D and tray recovery on your setup. Compilation and NSIS generation pass in CI; the reveal/restoration path still needs native Windows interaction checks.
 
 ## Fedora KDE
 
@@ -63,7 +63,20 @@ sudo dnf install rust cargo webkit2gtk4.1-devel openssl-devel curl wget file \
   libappindicator-gtk3-devel librsvg2-devel libxdo-devel gcc gcc-c++ make patchelf
 ```
 
-Then use `npm run tauri -- dev` or `npm run tauri -- build`. The Linux override targets RPM. This configuration is prepared for native validation; an RPM has not yet been built or installed in this workspace.
+Then use `npm run tauri -- dev` for development, or build the RPM with the retained Rust lockfile:
+
+```sh
+npm run tauri -- build -- --locked
+```
+
+The Linux override targets RPM. A Fedora 44 x86_64 package has been built and inspected; installation and KDE Wayland interaction checks remain. For a local build, install and launch it with:
+
+```sh
+sudo dnf install ./src-tauri/target/release/bundle/rpm/ORBIT-0.1.0-1.x86_64.rpm
+orbit
+```
+
+See the [native verification record](docs/testing.md#native-verification-record) for measured results and remaining checks.
 
 Linux starts as a taskbar-visible window and does not receive Windows-only desktop stacking requests. The desktop-blur setting is disabled outside Windows. A native Plasma widget is a later, separate implementation.
 

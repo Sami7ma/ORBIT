@@ -24,8 +24,8 @@ The source snapshot had icons but no original app screenshots. The reference ima
 
 | Area | Checks |
 | --- | --- |
-| Windows | Native build and installer, tray reveal/focus-loss restoration, Win+D, acrylic fallback, quit, sleep/resume, taskbar recovery |
-| Fedora KDE | Native build, RPM install/remove, real Wayland rendering, tray, normal taskbar recovery, WebKitGTK fonts and scaling |
+| Windows | Installer install/upgrade/remove, tray reveal/focus-loss restoration, Win+D, acrylic fallback, quit, sleep/resume, taskbar recovery |
+| Fedora KDE | RPM install/upgrade/remove, real Wayland rendering, tray, normal taskbar recovery, WebKitGTK fonts and scaling |
 | Data | Upgrade from a real old profile, read-only storage, background quota failure, explicit Local weather choice |
 | Displays | 100/125/150/200 percent scaling, two mixed-DPI monitors, monitor removal, saved position recovery |
 | Accessibility | Keyboard navigation, Narrator/Orca, forced colors, reduced motion, opaque surface and larger display scaling |
@@ -48,3 +48,32 @@ rustc --version
 pkg-config --modversion webkit2gtk-4.1 gtk+-3.0
 npm run tauri -- build -- --locked
 ```
+
+## Native verification record
+
+Checked on 2026-11-24. Fedora results apply to Fedora 44 KDE on x86_64;
+other Fedora versions have not been established as supported.
+
+| Check | Result and scope |
+| --- | --- |
+| Windows and Ubuntu frontend, unit and browser checks | Passed in [the first reliability run](https://github.com/Sami7ma/ORBIT/actions/runs/45395935330) |
+| Locked Windows and Ubuntu native builds; NSIS/RPM generation | Passed in [the installer workflow](https://github.com/Sami7ma/ORBIT/actions/runs/45423280063) |
+| Fedora release build and RPM | `npm run tauri -- build -- --locked` passed with Cargo/rustc 1.100.0, WebKitGTK 2.54.2 and GTK 3.24.52; no Rust compiler warnings after platform scoping |
+| Retained Rust lockfile | Byte-for-byte unchanged after the Fedora build |
+| RPM contents | Contains the executable, desktop entry and 32/128/512-pixel icons; summary, description and Utility category populated |
+| RPM dependencies | All three declared library providers are installed; `ldd` reports no unresolved libraries on this machine |
+| Desktop entry | `desktop-file-validate` passes |
+| RPM executable | Matches the release executable except for Tauri's documented-in-source RPM bundle-type marker |
+| Native startup | RPM executable launched with an isolated temporary profile; process remained running. Visual and interaction verification awaits manual confirmation |
+| System installation and upgrades | Pending; inspecting and launching an extracted RPM is not an installed-package test |
+| Windows desktop interaction | Pending on a real Windows desktop |
+
+The local development package is
+`src-tauri/target/release/bundle/rpm/ORBIT-0.1.0-1.x86_64.rpm`, with SHA-256
+`df2631a122690f3317b25b5c22af6c69df783d28db42b8256a1fe0a1b96f043f`.
+Build artifacts are ignored by Git. Packages are unsigned, and the distribution
+license remains a release decision.
+
+Native startup logged one GTK warning,
+`gtk_window_set_titlebar() called on a realized window`. It did not terminate
+the process; this observation does not establish correct rendering or tray behavior.
