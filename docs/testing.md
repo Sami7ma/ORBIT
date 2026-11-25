@@ -64,8 +64,9 @@ other Fedora versions have not been established as supported.
 | RPM dependencies | All three declared library providers are installed; `ldd` reports no unresolved libraries on this machine |
 | Desktop entry | `desktop-file-validate` passes |
 | RPM executable | Matches the release executable except for Tauri's documented-in-source RPM bundle-type marker |
-| Native startup | User confirmed the initial native window appears in Fedora KDE using the isolated test profile. Detailed interaction, rendering, scaling and tray recovery checks remain pending |
-| System installation and upgrades | Pending; inspecting and launching an extracted RPM is not an installed-package test |
+| Native startup | User confirmed the native window appears in Fedora KDE using the isolated test profile |
+| System installation | On 2026-11-25 the user reported that the Fedora RPM installation and app work. Individual scaling, tray and restart checks were not separately reported |
+| System upgrades and removal | Pending on Fedora |
 | Windows desktop interaction | Pending on a real Windows desktop |
 
 The local development package is
@@ -104,4 +105,6 @@ restored the original unpinned state. This verifies the native KDE setter and it
 acknowledgement path, rather than only the appearance of a pressed button. The
 updated application and RPM also build with the retained locked dependency
 versions. Windows focus-loss/tray behavior while pinned and native button
-interaction across a restart remain manual platform checks.
+interaction across a restart remain manual platform checks. Subsequently, the
+user reported that the installed Fedora app works; results for each individual
+check were not separately reported.
