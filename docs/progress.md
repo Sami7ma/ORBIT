@@ -49,7 +49,7 @@ This file records delivered code separately from platform verification. It follo
 - [ ] Verify normal-window behavior, tray recovery and scaling on Wayland.
 - [x] User reports installing and using the RPM on Fedora 44 KDE.
 - [ ] Test RPM upgrades and removal, and installation on other Fedora versions.
-- [ ] Capture actual Fedora screenshots.
+- [x] Add user-supplied Fedora screenshots and crop their presentation to the rounded app window.
 - [ ] Evaluate Flatpak after native behavior is validated.
 
 ## Plasma 6 widget

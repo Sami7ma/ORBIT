@@ -164,30 +164,30 @@ test("captures current browser-preview design references", async ({ page }) => {
   await page.getByRole("button", { name: /^London,/ }).click();
   await expect(page.getByRole("region", { name: "London details" }).getByText("20°C", { exact: true }).first()).toBeVisible();
   await mkdir("docs/screenshots", { recursive: true });
-  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-forecast.png", animations: "disabled" });
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-forecast.png", animations: "disabled", omitBackground: true });
   await page.keyboard.press("Escape");
   await expect(page.locator(".panel")).toHaveCount(0);
-  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-overview.png", animations: "disabled" });
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-overview.png", animations: "disabled", omitBackground: true });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-settings.png", animations: "disabled" });
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-settings.png", animations: "disabled", omitBackground: true });
   await page.locator(".sbody").evaluate((element) => { element.scrollTop = element.scrollHeight; });
-  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-weather-settings.png", animations: "disabled" });
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-weather-settings.png", animations: "disabled", omitBackground: true });
   await page.locator(".sbody").evaluate((element) => { element.scrollTop = 0; });
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.getByRole("button", { name: "Add a city", exact: true }).click();
-  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-cities.png", animations: "disabled" });
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-cities.png", animations: "disabled", omitBackground: true });
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Solid black", exact: true }).click();
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.keyboard.press("Escape");
-  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-solid.png", animations: "disabled" });
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-solid.png", animations: "disabled", omitBackground: true });
   await page.getByRole("separator", { name: "Resize from right", exact: true }).focus();
   for (let i = 0; i < 23; i++) await page.keyboard.press("ArrowLeft");
-  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-single-city.png", animations: "disabled" });
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-single-city.png", animations: "disabled", omitBackground: true });
   await page.getByRole("separator", { name: "Resize from bottom", exact: true }).focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press("ArrowDown");
-  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-two-rows.png", animations: "disabled" });
+  await page.locator(".shell").screenshot({ path: "docs/screenshots/browser-two-rows.png", animations: "disabled", omitBackground: true });
 });
 
 
