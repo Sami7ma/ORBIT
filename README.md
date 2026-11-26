@@ -2,9 +2,9 @@
 
 A compact world clock for your desktop. ORBIT shows the time in your chosen cities as rings that move through the day, with optional weather and forecasts.
 
-![ORBIT displaying world clocks for Local, New York, London and Tokyo](docs/screenshots/browser-overview.png)
+![ORBIT displaying world clocks on Fedora KDE](docs/screenshots/fedora-overview-rounded.svg)
 
-*Interface preview with sample time and weather.*
+*ORBIT running on Fedora KDE.*
 
 ## Install on Fedora
 
@@ -27,11 +27,11 @@ This package is unsigned. The Fedora 44 KDE installation and basic app use have 
 - **Lock and pin:** Use the controls in the top-left corner to lock the window in place or keep it above other windows.
 - **Customize:** Open Settings to change the appearance, clock size, time format and weather units. Weather can be turned off. For Local weather, select a location in Settings or the clock details.
 
-| Forecast | City management |
+| Forecast | Appearance settings |
 | --- | --- |
-| ![Expanded clock with hourly forecast](docs/screenshots/browser-forecast.png) | ![City search and selected clock ordering](docs/screenshots/browser-cities.png) |
+| ![Expanded New York clock with hourly forecast on Fedora](docs/screenshots/fedora-forecast-rounded.svg) | ![ORBIT appearance settings on Fedora](docs/screenshots/fedora-settings-rounded.svg) |
 
-These images are browser previews using sample data. More examples and their provenance are in [verification](docs/testing.md#screenshot-provenance).
+These screenshots were captured from the Fedora application. More examples and their provenance are in [verification](docs/testing.md#screenshot-provenance).
 
 ## Availability
 
