@@ -2,13 +2,15 @@
 
 A compact world clock for your desktop. ORBIT shows the time in your chosen cities as rings that move through the day, with optional weather and forecasts.
 
+[Download for Fedora](https://github.com/Sami7ma/ORBIT/releases/download/v0.1.0/ORBIT-0.1.0-1.x86_64.rpm) · [Release notes](https://github.com/Sami7ma/ORBIT/releases/tag/v0.1.0) · [Roadmap](docs/progress.md)
+
 ![ORBIT displaying world clocks on Fedora KDE](docs/screenshots/fedora-overview-rounded.svg)
 
 *ORBIT running on Fedora KDE.*
 
 ## Install on Fedora
 
-ORBIT 0.1.0 is available as an RPM for **Fedora 44 on x86_64**. Download `ORBIT-0.1.0-1.x86_64.rpm` from the [GitHub releases page](https://github.com/Sami7ma/ORBIT/releases) when the release is published. Then open a terminal in your Downloads folder and run:
+Download the [ORBIT 0.1.0 RPM](https://github.com/Sami7ma/ORBIT/releases/download/v0.1.0/ORBIT-0.1.0-1.x86_64.rpm) for **Fedora 44 on x86_64**. Then open a terminal and run:
 
 ```sh
 cd ~/Downloads
@@ -17,7 +19,7 @@ sudo dnf install ./ORBIT-0.1.0-1.x86_64.rpm
 
 Open **ORBIT** from the application launcher, or run `orbit` in a terminal. To remove the application, run `sudo dnf remove ORBIT`.
 
-This package is unsigned. The Fedora 44 KDE installation and basic app use have been reported working; other Fedora versions and upgrade/removal paths still need testing. See [verification](docs/testing.md) for the test record.
+The package has been tested on Fedora 44 KDE. It is unsigned; checksums and the tested platform scope are listed in the [release notes](https://github.com/Sami7ma/ORBIT/releases/tag/v0.1.0).
 
 ## Using ORBIT
 
@@ -37,8 +39,8 @@ These screenshots were captured from the Fedora application. More examples and t
 
 | Platform | Status |
 | --- | --- |
-| Fedora 44 KDE, x86_64 | RPM built; installation and basic use reported working |
-| Windows | Installer built in CI; native installation and desktop behavior still need testing |
+| Fedora 44 KDE, x86_64 | [0.1.0 RPM release](https://github.com/Sami7ma/ORBIT/releases/tag/v0.1.0) |
+| Windows | In development; installer builds pass, native desktop validation pending |
 | Plasma widget | Planned |
 | Android and iOS | Planned |
 
@@ -56,3 +58,5 @@ npm run build
 ```
 
 For native prerequisites, packaging, browser tests and platform checks, see [development](docs/development.md) and [verification](docs/testing.md). The clock and bundled city search work offline; optional weather and worldwide city search use [Open-Meteo](https://open-meteo.com/).
+
+Report problems and suggest improvements through [GitHub Issues](https://github.com/Sami7ma/ORBIT/issues). Include your operating system, ORBIT version and steps to reproduce the issue.

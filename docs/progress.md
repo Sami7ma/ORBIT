@@ -27,7 +27,7 @@ This file records delivered code separately from platform verification. It follo
 - [x] Compile Windows and generate its NSIS installer in CI.
 - [x] Build the Fedora 44 x86_64 RPM and validate its desktop entry and declared library providers.
 - [ ] Verify Windows installer and native desktop behavior.
-- [x] User reports the Fedora RPM installation and app work on their KDE session (2026-11-25).
+- [x] Fedora 44 KDE installation and basic use confirmed (2026-11-25).
 - [x] Retain the existing Cargo.lock from the GitHub repository.
 - [x] Verify the retained Rust lockfile against the tray-enabled manifest with a locked Fedora native build.
 
@@ -47,7 +47,7 @@ This file records delivered code separately from platform verification. It follo
 - [x] Confirm the native test window appears in the Fedora KDE session (user-reported smoke check).
 - [x] Confirm compact activation, persistent weather and one-city resize/scroll behavior (user-reported check).
 - [ ] Verify normal-window behavior, tray recovery and scaling on Wayland.
-- [x] User reports installing and using the RPM on Fedora 44 KDE.
+- [x] Confirm RPM installation and basic use on Fedora 44 KDE.
 - [ ] Test RPM upgrades and removal, and installation on other Fedora versions.
 - [x] Add user-supplied Fedora screenshots and crop their presentation to the rounded app window.
 - [ ] Evaluate Flatpak after native behavior is validated.
@@ -71,6 +71,7 @@ This file records delivered code separately from platform verification. It follo
 
 ## Release decisions
 
+- [x] Publish Fedora 0.1.0 with its RPM, release notes and SHA-256 checksum (2026-11-26).
 - [ ] Choose the project's distribution license.
 - [ ] Define the tested OS/version support matrix.
 - [ ] Choose signing and update-delivery policies.

@@ -41,6 +41,17 @@ npm run tauri -- build -- --locked
 
 The NSIS installer is generated under `src-tauri/target/release/bundle/nsis/`. The tray menu provides **Show ORBIT** and **Quit ORBIT**; native desktop interaction and installation remain to be tested.
 
+### Windows release preparation
+
+1. Use a successful [Check ORBIT workflow](https://github.com/Sami7ma/ORBIT/actions/workflows/check.yml) run for the commit being tested. Download and extract its `desktop-bundles-Windows` artifact, or build the NSIS installer locally with the command above.
+2. Install the `*-setup.exe` package on Windows and record the Windows version, display scaling and ORBIT commit/version.
+3. Check city and weather settings, clock details, edge/corner resizing, scrolling, lock and pin, and settings after a full quit/relaunch.
+4. Verify Show ORBIT in the tray, focus-loss restoration, Win+D, Explorer restart, sleep/resume and monitor changes. Check the install, upgrade and uninstall paths.
+5. Record results in [verification](testing.md), capture native Windows screenshots and resolve failures. Choose the signing policy before publishing a Windows installer.
+6. Attach the tested installer and a SHA-256 checksum to a GitHub release, describe the tested Windows environment, and then add the Windows download to the README.
+
+Autostart, single-instance handling and visible-screen recovery are tracked in the [roadmap](progress.md). CI build success alone is not a native interaction result.
+
 ## Data and offline behavior
 
 The clock and bundled city search work offline. Weather is optional and cached in memory; a new offline launch has no saved forecast. If a refresh fails during a session, ORBIT labels the last successful forecast as saved and suppresses stale animated scenes. Local time follows the device timezone; Local weather requires an explicit location.
