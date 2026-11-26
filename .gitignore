@@ -1,7 +1,7 @@
 # dependencies
 node_modules/
 
-# build output (rebuilt any time)
+# build output
 dist/
 src-tauri/target/
 src-tauri/gen/
@@ -10,17 +10,18 @@ src-tauri/gen/
 *.exe
 *.msi
 *.zip
+*.rpm
 
 # logs
 *.log
 npm-debug.log*
 
-# secrets: never commit these
+# local environment configuration
 .env
 .env.*
 !.env.example
 
-# OS junk
+# operating system files
 .DS_Store
 Thumbs.db
 desktop.ini

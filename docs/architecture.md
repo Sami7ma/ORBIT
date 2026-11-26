@@ -1,6 +1,6 @@
 # Architecture
 
-ORBIT keeps its original React ring interface inside a Tauri desktop shell. Pure domain rules are separated from React lifecycle and native window operations so they can be tested without a webview.
+ORBIT uses a React interface inside a Tauri desktop shell. Pure domain rules are separated from React lifecycle and native window operations so they can be tested without a webview.
 
 | Location | Responsibility |
 | --- | --- |
@@ -73,5 +73,3 @@ A temporary script matches only ORBIT's process ID and window title, acknowledge
 the actual property value over a private session-bus connection, and is unloaded
 afterward. It does not install a KWin script or write window rules. Other desktop
 backends use Tauri's native window API; other Wayland compositors remain unverified.
-The Linux dependency uses the DBus version already present in Cargo.lock; only
-the root dependency edge was added.
