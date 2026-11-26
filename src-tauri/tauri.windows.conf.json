@@ -3,7 +3,7 @@
   "app": {
     "windows": [{
       "label": "main", "title": "ORBIT", "width": 520, "height": 214,
-      "resizable": false, "decorations": false, "transparent": true,
+      "resizable": true, "decorations": false, "transparent": true,
       "alwaysOnTop": false, "shadow": true, "skipTaskbar": true
     }]
   },

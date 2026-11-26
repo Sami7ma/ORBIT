@@ -16,3 +16,22 @@ test("damaged preferences cannot produce invalid scales, styles, or units", () =
   assert.equal(cleanSettings({ scale: 100 }).scale, 1.5);
   assert.equal(cleanSettings({ scale: -5 }).scale, 0.7);
 });
+
+
+test("viewport preferences migrate independently of clock scale and reject damaged dimensions", () => {
+  const older = cleanSettings({ scale: 1.2 });
+  assert.equal(older.viewportWidth, 520);
+  assert.equal(older.viewportHeight, 188);
+  const damaged = cleanSettings({ viewportWidth: NaN, viewportHeight: -1 });
+  assert.equal(damaged.viewportWidth, 520);
+  assert.equal(damaged.viewportHeight, 188);
+  const narrow = cleanSettings({ viewportWidth: 160, viewportHeight: 348, scale: 1 });
+  assert.equal(narrow.viewportWidth, 160);
+  assert.equal(narrow.scale, 1);
+});
+
+test("quick lock and pin preferences are independent and older profiles start unpinned", () => {
+  assert.equal(cleanSettings({ lock: true }).pinned, false);
+  assert.equal(cleanSettings({ lock: true, pinned: true }).pinned, true);
+  assert.equal(cleanSettings({ pinned: "yes" }).pinned, false);
+});

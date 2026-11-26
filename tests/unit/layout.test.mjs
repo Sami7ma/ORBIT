@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { layoutQueue } from "../../src/platform/layout.ts";
+import { layoutQueue, windowSizeTracker } from "../../src/platform/layout.ts";
 
 test("window layout calls are serialized and only the newest queued layout runs", async () => {
   const applied = [];
@@ -22,4 +22,37 @@ test("a failed native layout is reported and does not block future updates", asy
   await assert.rejects(queue({ width: 100, height: 100, scale: 1 }), /native failure/);
   await queue({ width: 300, height: 300, scale: 1 });
   assert.deepEqual(applied, [300]);
+});
+
+
+import { fitViewport, resizeViewport, viewportRows } from "../../src/platform/viewport.ts";
+
+test("every resize edge preserves at least one complete clock without changing the city list", () => {
+  const initial = { width: 520, height: 348 };
+  for (const edge of ["North", "South", "East", "West", "NorthEast", "NorthWest", "SouthEast", "SouthWest"]) {
+    const dx = edge.includes("West") ? 1000 : -1000;
+    const dy = edge.includes("North") ? 1000 : -1000;
+    const next = resizeViewport(initial, edge, dx, dy, 4);
+    assert.ok(next.width >= 160);
+    assert.ok(next.height >= 188);
+    if (edge.includes("West") || edge.includes("East")) assert.equal(next.width, 160);
+    if (edge.includes("North") || edge.includes("South")) assert.equal(next.height, 188);
+  }
+});
+
+test("one-city layouts fit the clock instead of reserving three empty columns", () => {
+  assert.deepEqual(fitViewport({ width: 520, height: 508 }, 1), { width: 160, height: 188 });
+  assert.equal(viewportRows(188), 1);
+  assert.equal(viewportRows(347), 1);
+  assert.equal(viewportRows(348), 2);
+});
+
+
+test("native resize tracking accepts a manual return to an earlier programmed size", () => {
+  const tracker = windowSizeTracker();
+  tracker.expect({ width: 520, height: 188 });
+  assert.equal(tracker.accept({ width: 520, height: 188 }), false);
+  assert.equal(tracker.accept({ width: 160, height: 188 }), true);
+  assert.equal(tracker.accept({ width: 520, height: 188 }), true);
+  assert.equal(tracker.accept({ width: 520.4, height: 188.2 }), false);
 });

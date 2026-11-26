@@ -1,13 +1,14 @@
+import { Close } from "./Icons";
 import type { City } from "../lib/cities";
 import { dateText, diffText, hourLabel, offsetText } from "../lib/time";
 import { glyph, LABEL, temperature, weatherIsStale, type WeatherState } from "../lib/weather";
 
 type Props = {
   city: City; now: Date; home: string; h24: boolean; utc: boolean;
-  weatherOn: boolean; weather?: WeatherState; onChooseWeather: () => void;
+  weatherOn: boolean; weather?: WeatherState; onChooseWeather: () => void; onClose: () => void;
 };
 
-export default function Panel({ city, now, home, h24, utc, weatherOn, weather, onChooseWeather }: Props) {
+export default function Panel({ city, now, home, h24, utc, weatherOn, weather, onChooseWeather, onClose }: Props) {
   const data = weather?.data;
   const stale = !!data && (weather?.status === "error" || weatherIsStale(data, now.getTime()));
   const age = data ? Math.max(0, Math.floor((now.getTime() - data.observedAt * 1000) / 60_000)) : 0;
@@ -29,6 +30,7 @@ export default function Panel({ city, now, home, h24, utc, weatherOn, weather, o
           : weather?.status === "error" ? "Forecast unavailable. Will retry." : "Loading forecast…"
         }</small>}
       </div>
+      <button className="panel-close" aria-label="Close city details" title="Close city details" onClick={onClose}><Close /></button>
       <div className="facts">
         <div className="fact"><small>Date</small><b>{dateText(city.tz, now)}</b></div>
         <div className="fact"><small>Offset</small><b>{offsetText(city.tz, now, utc)}</b></div>

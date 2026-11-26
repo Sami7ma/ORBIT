@@ -16,7 +16,7 @@
         "title": "ORBIT",
         "width": 520,
         "height": 214,
-        "resizable": false,
+        "resizable": true,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": false,

@@ -4,3 +4,5 @@ export const Gear = () => <svg {...p}><circle cx="12" cy="12" r="3" /><path d="M
 export const Pin = ({ on }: { on: boolean }) => <svg {...p} fill={on ? "currentColor" : "none"}><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6Z" /></svg>;
 export const Minus = () => <svg {...p}><path d="M5 12h14" /></svg>;
 export const Close = () => <svg {...p}><path d="M6 6l12 12M18 6 6 18" /></svg>;
+
+export const Lock = ({ on }: { on: boolean }) => <svg {...p}><rect x="5" y="10" width="14" height="11" rx="2" /><path d={on ? "M8 10V6a4 4 0 0 1 8 0v4" : "M8 10V6a4 4 0 0 1 8 0"} /><path d="M12 14v3" /></svg>;
