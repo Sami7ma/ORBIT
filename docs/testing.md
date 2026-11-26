@@ -17,10 +17,13 @@ The browser suite intercepts external services and uses a fixed clock. It exerci
 ## Screenshot provenance
 
 The `fedora-*.png` screenshots were supplied by the user from the Fedora app on
-2026-11-26. Their matching `-rounded.svg` files display the original PNGs with
-rounded clipping for the README; the source screenshots remain unchanged.
+2026-11-26. Their matching `-rounded.svg` files crop to the visible app window
+and clip its rounded corners, removing the surrounding desktop from the README.
+A one-pixel inset removes edge pixels blended with the wallpaper. The original
+PNGs retain the supplied captures; the app contents are not retouched or rebuilt.
+Run `node scripts/prepare-fedora-screenshots.mjs` to recreate the display files.
 
-`npm run screenshots` captures the current browser preview into `docs/screenshots/`. Samples use a fixed instant of 2026-11-23 12:15 UTC, device timezone Africa/Addis_Ababa, deterministic mocked weather, reduced motion and a 1000×950 browser viewport. These are development reference images, not native Windows or Fedora screenshots and not evidence of current real-world weather.
+`npm run screenshots` captures the current browser preview into `docs/screenshots/` with transparent corners. Samples use a fixed instant of 2026-11-23 12:15 UTC, device timezone Africa/Addis_Ababa, deterministic mocked weather, reduced motion and a 1000×950 browser viewport. These are development reference images, not native Windows or Fedora screenshots and not evidence of current real-world weather.
 
 The source snapshot had icons but no original app screenshots. The reference images preserve the current ring design after the first reliability implementation; they are not a before/after comparison with an earlier release.
 
